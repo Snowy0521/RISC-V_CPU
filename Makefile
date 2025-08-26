@@ -64,7 +64,7 @@ sim/Vtop: ${VMEM} src/*.v $(CPP_SOURCES)
 	${VERILATOR} ${VERILATOR_FLAGS} ${CPP_SOURCES} \
 		--top-module cpu \
 		--Mdir sim \
-		src/cpu.v src/register_file.v src/alu.v src/memory.v 
+		src/*.v
 	make -C sim -f Vtop.mk
 
 # Running the Simulation
