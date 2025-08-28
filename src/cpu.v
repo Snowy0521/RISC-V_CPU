@@ -156,45 +156,77 @@ module cpu(
     // Control logic
     always_comb begin
         // Default values 
-        reg_write_enable = 1'b0;
         alu_src = 1'b0;
-        mem_write_enable = 1'b0;
-        alu_op = 2'b00;
-        mem_read_enable = 1'b0;
         mem_to_reg = 1'b0;
+        reg_write_enable = 1'b0;
+        mem_read_enable = 1'b0;
+        mem_write_enable = 1'b0;
         branch = 1'b0;
+        alu_op = 2'b00;
+        
         case(opcode)
             OPCODE_LOAD: begin
-                reg_write_enable = 1'b1;
                 alu_src = 1'b1;
-                mem_read_enable = 1'b1;
                 mem_to_reg = 1'b1;
+                reg_write_enable = 1'b1;
+                mem_read_enable = 1'b1;
+                mem_write_enable = 1'b0;
+                branch = 1'b0;
                 alu_op = 2'b00; // ADD operation
             end 
             OPCODE_STORE: begin
                 alu_src = 1'b1;
+                mem_to_reg = 1'bx; // Don't care
+                reg_write_enable = 1'b0;
+                mem_read_enable = 1'b0;
                 mem_write_enable = 1'b1;
+                branch = 1'b0;
                 alu_op = 2'b00; // ADD operation
             end
             OPCODE_ARITH: begin
-                reg_write_enable = 1'b1;
                 alu_src = 1'b1;
+                mem_to_reg = 1'b0;
+                reg_write_enable = 1'b1;
+                mem_read_enable = 1'b0;
+                mem_write_enable = 1'b0;
+                branch = 1'b0;
                 alu_op = 2'b10; // R-type or I-type arithmetic
             end 
             OPCODE_BRANCH: begin
-                alu_op = 2'b01; // SUB operation
+                alu_src = 1'b0;
+                mem_to_reg = 1'bx; // Don't care
+                reg_write_enable = 1'b0;
+                mem_read_enable = 1'b0;
+                mem_write_enable = 1'b0;
                 branch = 1'b1;
+                alu_op = 2'b01; // SUB operation
             end
             OPCODE_R_TYPE: begin
-                reg_write_enable = 1'b1;
-                alu_op = 2'b10; // R-type arithmetic
                 alu_src = 1'b0;
+                mem_to_reg = 1'b0;
+                reg_write_enable = 1'b1;
+                mem_read_enable = 1'b0;
+                mem_write_enable = 1'b0;
+                branch = 1'b0;
+                alu_op = 2'b10; // R-type arithmetic
             end
             OPCODE_JAL: begin
+                alu_src = 1'bx; // Don't care
+                mem_to_reg = 1'b0;
                 reg_write_enable = 1'b1;
+                mem_read_enable = 1'b0;
+                mem_write_enable = 1'b0;
+                branch = 1'bx; // Don't care
+                alu_op = 2'bxx;
             end
             OPCODE_JALR: begin
+                alu_src = 1'bx; // Don't care
+                mem_to_reg = 1'b0;
                 reg_write_enable = 1'b1;
+                mem_read_enable = 1'b0;
+                mem_write_enable = 1'b0;
+                branch = 1'bx; // Don't care
+                alu_op = 2'bxx;
             end
             default: begin
                 // Default case: do nothing
