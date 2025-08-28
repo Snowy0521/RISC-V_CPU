@@ -24,7 +24,7 @@ LINKER_SCRIPT = firmware/link.ld # Points to the linker script, which defines th
 VERILATOR = verilator # Invorkes the Verilator tool 
 VERILATOR_FLAGS = -Wall --cc --exe --trace --trace-structs -02 # Enables all warnings (-Wall), generates C++ code (--cc), compiles the C++ testbench (--exe), enables waveform tracing (--trace), and optimizes the generated code (-O2)
 TOP_MODULE = top # Defines the name of the top module in the Verilog design
-CPP_SOURCES = sim/top.cpp: # Specifies the C++ file that acts as the testbench for the simulation
+CPP_SOURCES = sim/top.cpp # Specifies the C++ file that acts as the testbench for the simulation
 
 # Targets
 all: sim.vcd # Specifies that when run the commmand 'make' without any arguments, it will build the simulation waveform file sim.vcd
@@ -53,7 +53,7 @@ ${VMLINUX}: ${FIRMWARE_ASM} ${FIRMWARE_C} ${LINKER_SCRIPT} # firmware.elf will b
 # dd of=${VMEM}: writes the concatenated output to the final memory image file firmware.img, which will be used by the Verilator simulation.
 ${VMEM}: ${VMLINUX}
 	mkdir -p ${VMEM_DIR}
-	${RISCV_OBJCOPY} -0 binary ${VMLINUX} ${VMEM_DIR}/tmp.bin 
+	${RISCV_OBJCOPY} -o binary ${VMLINUX} ${VMEM_DIR}/tmp.bin 
 	dd if=/dev/zero of=${VMEM_DIR}/zero.pad bs=1 count=8192 2>/dev/null
 	cat ${VMEM_DIR}/tmp.bin ${VMEM_DIR}/zero.pad | \ 
 		dd of=${VMEM} bs=1 count=8192 2>/dev/null
