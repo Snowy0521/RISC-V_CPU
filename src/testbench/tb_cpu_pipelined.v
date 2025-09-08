@@ -62,6 +62,21 @@ module tb_cpu_pipelined;
         uut.instruction_memory.mem[13] = 32'b000000000000_00000_000_00000_0010011; // nop (addi x0, x0, 0)
         uut.instruction_memory.mem[14] = 32'b0000000_01011_00001_000_01100_0110011; // add x12, x1, x11  # MEM->EX forwarding
 
+        // Test Case 7: JAL 
+        uut.instruction_memory.mem[15] = 32'b000000000000_00000_000_01101_1101111; // jal x13, +0 (next instruction)
+        // PC+4 should be saved in x13
+
+        // Test Case 8: JALR (Jump and Link Register) - Jump to absolute address
+        uut.instruction_memory.mem[16] = 32'b000000001000_00000_000_01110_1100111; // jalr x14, 8(x0) => jump to 0x8
+        // Should jump to PC=8, save return in x14 (but we jump to existing instruction for safety)
+
+        // Test Case 9: SLT (Set if Less Than) - x15 = (x2 < x1) ? 1 : 0 => 2>1 => 0
+        uut.instruction_memory.mem[17] = 32'b0000000_00001_00010_010_01111_0110011; // slt x15, x2, x1
+
+        // Test Case 10: Load-Use Stall Chain 
+        uut.instruction_memory.mem[18] = 32'b000000001010_00000_010_10000_0000011; // lw x16, 10(x0)     # x16 = 10
+        uut.instruction_memory.mem[19] = 32'b0000000_00100_10000_000_10001_0110011; // add x17, x16, x4  # x17 = 10 + 4 = 14 (stall here)
+
         // Initialize data memory
         uut.data_memory.mem[0] = 32'h0000000A; // 10 in decimal
         uut.data_memory.mem[1] = 32'h00000000; // Will be written to store x5
@@ -79,6 +94,12 @@ module tb_cpu_pipelined;
         expected_results[10] = 32'h00000004; // x10 = x9 + 1 = 4
         expected_results[11] = 32'h00000006; // x11 = mem[1] = x5 = 6
         expected_results[12] = 32'h00000007; // x12 = x1 + x11 = 7
+        expected_results[13] = 32'h00000040; // x13 = return address of jal (PC+4 of instruction 15 = 0x3C + 4 = 0x40)
+        expected_results[14] = 32'h00000044; // x14 = return address of jalr (PC+4 of instruction 16 = 0x40 + 4 = 0x44)
+        expected_results[15] = 32'h00000000; // x15 = (x2 < x1) = 0
+        expected_results[16] = 32'h0000000A; // x16 = 10
+        expected_results[17] = 32'h0000000D; // x17 = 14
+        
         
         $display("@(T=%0t) [INFO] Test program loaded. Releasing reset...", $time);
 
@@ -88,7 +109,7 @@ module tb_cpu_pipelined;
 
         // Monitor pipeline for several cycles
         cycle_count = 0;
-        repeat(20) begin // 15 cc for instruction + 4 overhead + 1 stall 
+        repeat(23) begin // 18 cc for instruction + 4 overhead + 1 stall 
             @(posedge clk)
             cycle_count++;
 
@@ -149,7 +170,7 @@ module tb_cpu_pipelined;
     task verify_results();
         integer i;
         integer passed_tests = 0;
-        integer total_tests = 12;
+        integer total_tests = 15;
         begin 
             $display("Verifying register values...");
 
