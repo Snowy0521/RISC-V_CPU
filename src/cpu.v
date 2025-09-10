@@ -30,10 +30,14 @@ module cpu(
     logic [31:0] mem_rdata; // Data memory read Data
 
     // Control signals
-    logic        branch;  // Branch signal
-    logic        mem_to_reg; // Memory to register signal (0: ALU result, 1: Memory data)
-    logic  [1:0] alu_op; // ALU operation type
-    logic        alu_src; // ALU source select (0: register, 1: immediate)
+    logic         branch;  // Branch signal
+    logic         mem_to_reg; // Memory to register signal (0: ALU result, 1: Memory data)
+    logic  [1:0]  alu_op; // ALU operation type
+    logic         alu_src; // ALU source select (0: register, 1: immediate)
+    logic  [31:0] imm; // Immediate value
+    logic  [6:0]  opcode; // Instruction opcode
+    logic  [2:0]  funct3; // Instruction funct3
+    logic  [6:0]  funct7; // Instruction funct7
 
     // Instantiate the adder for PC + 4
     adder_pc4 adder_pc4_init(
@@ -104,13 +108,7 @@ module cpu(
     parameter OPCODE_AUIPC  = 7'b0010111; // Add Upper Immediate to pc_jalr
     parameter OPCODE_R_TYPE = 7'b0110011; // R-type instructions
 
-    
     // Instruction decode
-    logic [31:0] imm; // Immediate value
-    logic [6:0]  opcode; // Instruction opcode
-    logic [2:0]  funct3; // Instruction funct3
-    logic [6:0]  funct7; // Instruction funct7
-    
     assign funct7   = instruction[31:25]; // funct7
     assign rs2_addr = instruction[24:20]; // rs2 address
     assign rs1_addr = instruction[19:15]; // rs1 address
@@ -242,12 +240,27 @@ module cpu(
         endcase
     end
 
+    // Add more branch conditions
+    logic branch_taken;
+    always_comb begin
+        branch_taken = 1'b0;
+        if (branch) begin
+            case (funct3)
+                3'b000: branch_taken = alu_zero;  // BEQ: branch if equal (zero flag set)
+                3'b001: branch_taken = ~alu_zero; // BNE: branch if not equal (zero flag clear)
+                3'b100: branch_taken = alu_result[31]; // BLT: branch if less than 
+                3'b101: branch_taken = alu_zero | ~alu_result[31]; // BGE: branch if greater or equal 
+                default: branch_taken = 1'b0;
+            endcase
+        end 
+    end 
+
     // PC logic
     always_comb begin 
         case (opcode)
             OPCODE_JAL: pc_next = pc_branch; // JAL
-            OPCODE_JALR: pc_next = (rs1_data + imm) & ~1; // JALR
-            default: pc_next = (branch && alu_zero) ? pc_branch : pc_plus4; // Branch or next instruction
+            OPCODE_JALR: pc_next = (rs1_data + imm) & ~32'b1; // JALR
+            default: pc_next = branch_taken ? pc_branch : pc_plus4; // Branch or next instruction
         endcase
     end   
     // PC register
