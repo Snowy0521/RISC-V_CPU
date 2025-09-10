@@ -1,83 +1,268 @@
-# Makefile for RISC-V CPU Simulation
+# Cross-Platform Makefile for RISC-V CPU Simulation
+# Supports both Linux (riscv32-unknown-elf-gcc) and macOS (riscv64-unknown-elf-gcc)
 # This Makefile automates the process of building and simulating a RISC-V CPU.
-# It takes a firmware program written in C and assembly, compiles it, links it, and then uses Verilator to build and run a C++ simulation of the CPU, generating a waveform file for analysis.
 
 # Variables and Paths
-TARGET = firmware # Defines the project name as firmaware
-VMLINUX = obj/${TARGET}.elf # Sets the variable VMLINUX to obj/${TARGET}.elf, which will be the output file for the compiled firmare in ELF (Executable and Linkable Fommat) format
-VMEM = bin/${TARGET}.img # Sets the variable VMEM to bin/${TARGET}.img, which is the binary image file used by the Verilator simulation
-VMLINUX_DIR = ${dir ${VMLINUX}} # Uses the dir function to extract the directory path from VMLINUX, setting VMLINUX_DIR to obj/
-VMEM_DIR = ${dir ${VMEM}} # Sets VMEM_DIR to bin/
+TARGET = firmware
+VMLINUX = obj/${TARGET}.elf
+VMEM = bin/${TARGET}.img
+VMLINUX_DIR = ${dir ${VMLINUX}}
+VMEM_DIR = ${dir ${VMEM}}
 
-# Toolchain
-RISCV_CC = riscv32-unknown-elf-gcc # Specifies the RISC-V GCC compiler
-RISCV_OBJCOPY = riscv32-unknown-elf-objcopy # Defines the objcopy tool for converting ELF files to binary 
-RISCV_OBJDUMP = riscv32-unknown-elf-objdump # Defines the objdump tool for disassembling ELF files
+# Auto-detect operating system
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    OS = Linux
+    DETECTED_OS = "Linux"
+endif
+ifeq ($(UNAME_S),Darwin)
+    OS = macOS
+    DETECTED_OS = "macOS"
+endif
 
+# Auto-detect RISC-V toolchain
+# Priority: riscv32 > riscv64
+RISCV32_CC := $(shell which riscv32-unknown-elf-gcc 2>/dev/null)
+RISCV64_CC := $(shell which riscv64-unknown-elf-gcc 2>/dev/null)
+
+ifneq ($(RISCV32_CC),)
+    # riscv32 toolchain found (preferred)
+    RISCV_PREFIX = riscv32-unknown-elf
+    RISCV_CC = riscv32-unknown-elf-gcc
+    RISCV_OBJCOPY = riscv32-unknown-elf-objcopy
+    RISCV_OBJDUMP = riscv32-unknown-elf-objdump
+    ARCH_FLAGS = 
+    TOOLCHAIN_MSG = "Using 32-bit toolchain: $(RISCV_PREFIX)"
+else ifneq ($(RISCV64_CC),)
+    # riscv64 toolchain found, configure for 32-bit target
+    RISCV_PREFIX = riscv64-unknown-elf
+    RISCV_CC = riscv64-unknown-elf-gcc
+    RISCV_OBJCOPY = riscv64-unknown-elf-objcopy
+    RISCV_OBJDUMP = riscv64-unknown-elf-objdump
+    ARCH_FLAGS = -march=rv32i -mabi=ilp32
+    TOOLCHAIN_MSG = "Using 64-bit toolchain with 32-bit target: $(RISCV_PREFIX)"
+else
+    # No toolchain found
+    RISCV_CC = echo "ERROR: No RISC-V toolchain found. Please install riscv32-unknown-elf-gcc or riscv64-unknown-elf-gcc" && false
+    RISCV_OBJCOPY = false
+    RISCV_OBJDUMP = false
+    ARCH_FLAGS = 
+    TOOLCHAIN_MSG = "No RISC-V toolchain found!"
+endif
 
 # Sources
-FIRMWARE_ASM = firmware/start.s # Points to the assembly startup file
-FIRMWARE_C = firmware/main.c # Points to the main C source file
-LINKER_SCRIPT = firmware/link.ld # Points to the linker script, which defines the memory layout 
+FIRMWARE_ASM = firmware/start.s
+FIRMWARE_C = firmware/main.c
+LINKER_SCRIPT = firmware/link.ld
+VERILOG_SOURCES = src/cpu.v src/alu.v src/register_file.v src/memory.v
 
-# Verilator 
-VERILATOR = verilator # Invorkes the Verilator tool 
-VERILATOR_FLAGS = -Wall --cc --exe --trace --trace-structs -02 # Enables all warnings (-Wall), generates C++ code (--cc), compiles the C++ testbench (--exe), enables waveform tracing (--trace), and optimizes the generated code (-O2)
-TOP_MODULE = top # Defines the name of the top module in the Verilog design
-CPP_SOURCES = sim/top.cpp # Specifies the C++ file that acts as the testbench for the simulation
+# Verilator configuration
+VERILATOR = verilator
+VERILATOR_FLAGS = -Wall --cc --exe --trace --trace-structs -O2
+TOP_MODULE = cpu
+CPP_SOURCES = sim/top.cpp
 
-# Targets
-all: sim.vcd # Specifies that when run the commmand 'make' without any arguments, it will build the simulation waveform file sim.vcd
+# Platform-specific settings
+ifeq ($(OS),macOS)
+    # macOS specific settings
+    DD_FLAGS = 2>/dev/null || true
+else
+    # Linux specific settings  
+    DD_FLAGS = 2>/dev/null
+endif
+
+# Default target
+all: info sim.vcd
+
+# Display system information
+info:
+	@echo "=================================================="
+	@echo "RISC-V CPU Simulation Build System"
+	@echo "=================================================="
+	@echo "Detected OS: $(DETECTED_OS)"
+	@echo $(TOOLCHAIN_MSG)
+	@echo "Target: $(TARGET)"
+	@echo "=================================================="
+
+# Check if toolchain is available
+check-toolchain:
+	@echo "Checking RISC-V toolchain..."
+ifneq ($(RISCV32_CC),)
+	@echo "Found riscv32-unknown-elf-gcc: $(RISCV32_CC)"
+	@$(RISCV_CC) --version | head -1
+else ifneq ($(RISCV64_CC),)
+	@echo "Found riscv64-unknown-elf-gcc: $(RISCV64_CC)"
+	@echo "Will use flags: $(ARCH_FLAGS)"
+	@$(RISCV_CC) --version | head -1
+else
+	@echo "No RISC-V toolchain found!"
+	@echo ""
+	@echo "Installation instructions:"
+	@echo "Linux (Ubuntu/Debian):"
+	@echo "   sudo apt-get install gcc-riscv64-unknown-elf"
+	@echo ""
+	@echo "macOS (Homebrew):"
+	@echo "   brew tap riscv-software-src/riscv"
+	@echo "   brew install riscv-tools"
+	@echo ""
+	@exit 1
+endif
 
 # Build the firmware
-# -nostdlib: Tells the compiler not to use the standard library, as this firmware is likely running on bare metal
-# -T ${LINKER_SCRIPT}: Uses the specified linker script to control memory layout
-# -o ${VMLINUX}: Specifies the output file for the compiled ELF firmware
-# -D disassembles all sections
-# > redirects the output to a human-readable list file (.lst), which is very useful for debugging and verifying the generated machine code. 
-${VMLINUX}: ${FIRMWARE_ASM} ${FIRMWARE_C} ${LINKER_SCRIPT} # firmware.elf will be rebuilt if any of the source files or the linker script change
-	mkdir -p ${VMLINUX_DIR} 
-	${RISCV_CC} ${FIRMWARE_ASM} ${FIRMWARE_C} \ 
-		-nostdlib -T ${LINKER_SCRIPT} -o ${VMLINUX} 
-	${RISCV_OBJDUMP} -D ${VMLINUX} > ${VMLINUX}.lst
+${VMLINUX}: ${FIRMWARE_ASM} ${FIRMWARE_C} ${LINKER_SCRIPT}
+	@echo "Building firmware for $(DETECTED_OS)..."
+	@mkdir -p ${VMLINUX_DIR}
+	$(RISCV_CC) $(ARCH_FLAGS) ${FIRMWARE_ASM} ${FIRMWARE_C} \
+		-nostdlib -T ${LINKER_SCRIPT} -o ${VMLINUX}
+	$(RISCV_OBJDUMP) -D ${VMLINUX} > ${VMLINUX}.lst
+	@echo "Firmware built successfully!"
+	@echo "Assembly listing: ${VMLINUX}.lst"
 
-# Generating the Memory Image
-# Converts the firmware ELF file into a raw binary file (tmp.bin), which is just the machine code and data without any headers or metadata.
-# dd (data definition): utilizes to create a file named zero.pad
-# if=/dev/zero: specifies that the input file is /dev/zero, which is a special file that provides as many null bytes as needed.
-# of=${VMEM_DIR}/zero.pad: specifies the output file where the null bytes will be written.
-# bs=1: sets the block size to 1 byte, meaning that each read and write operation will handle one byte at a time.
-# count=8192: specifies that 8192 bytes (8 KB) of zero bytes should be written to the output file.
-# 2>/dev/null: redirects any error messages to /dev/null (black hole), keeping the terminal output clean.
-# cat ... |: concatenates the temporary binary file and the zero.pad file, creating a complete memory image, sending the output through a pipe (|)
-# dd of=${VMEM}: writes the concatenated output to the final memory image file firmware.img, which will be used by the Verilator simulation.
+# Generate memory image
 ${VMEM}: ${VMLINUX}
-	mkdir -p ${VMEM_DIR}
-	${RISCV_OBJCOPY} -o binary ${VMLINUX} ${VMEM_DIR}/tmp.bin 
-	dd if=/dev/zero of=${VMEM_DIR}/zero.pad bs=1 count=8192 2>/dev/null
-	cat ${VMEM_DIR}/tmp.bin ${VMEM_DIR}/zero.pad | \ 
-		dd of=${VMEM} bs=1 count=8192 2>/dev/null
+	@echo "Generating memory image..."
+	@mkdir -p ${VMEM_DIR}
+	$(RISCV_OBJCOPY) -O binary ${VMLINUX} ${VMEM_DIR}/tmp.bin
+	dd if=/dev/zero of=${VMEM_DIR}/zero.pad bs=1 count=8192 $(DD_FLAGS)
+	cat ${VMEM_DIR}/tmp.bin ${VMEM_DIR}/zero.pad | \
+		dd of=${VMEM} bs=1 count=8192 $(DD_FLAGS)
+	@echo "Memory image generated: ${VMEM}"
+	@echo "Size: $$(wc -c < ${VMEM}) bytes"
+	@echo "First few instructions:"
+	@hexdump -C ${VMEM} | head -4
 
-# Compiling the Verilator Simulator
-# make -C sim -f Vtop.mk: This command changes the directory to sim and runs the Makefile Vtop.mk, which is generated by Verilator. It compiles the C++ testbench and links it with the Verilog design files.
-sim/Vtop: ${VMEM} src/*.v $(CPP_SOURCES)
-	${VERILATOR} ${VERILATOR_FLAGS} ${CPP_SOURCES} \
-		--top-module cpu \
+# View generated assembly
+view-asm: ${VMLINUX}
+	@echo "Generated Assembly Code:"
+	@echo "=========================="
+	@cat ${VMLINUX}.lst | head -30
+	@echo "=========================="
+	@echo "Memory Image (first 64 bytes):"
+	@hexdump -C ${VMEM} | head -4
+
+# Compile Verilator simulator
+# make -C sim -f Vcpu.mk: This command changes the directory to sim and runs the Makefile Vcpu.mk, which is generated by Verilator. It compiles the C++ testbench and links it with the Verilog design files
+sim/Vcpu: ${VMEM} $(VERILOG_SOURCES) $(CPP_SOURCES)
+	@echo "Compiling Verilator simulator..."
+	$(VERILATOR) $(VERILATOR_FLAGS) $(CPP_SOURCES) \
+		--top-module $(TOP_MODULE) \
 		--Mdir sim \
-		src/*.v
-	make -C sim -f Vtop.mk
+		$(VERILOG_SOURCES)
+	make -C sim -f Vcpu.mk
+	@echo "Verilator simulator compiled!"
 
-# Running the Simulation
-sim.vcd: sim/Vtop
-	sim/Vtop 
+# Run simulation
+# Running the simulation generates the waveform file sim.vcd for analysis
+sim.vcd: sim/Vcpu
+	@echo "Running simulation..."
+	sim/Vcpu
+	@echo "Simulation complete! Waveform: sim.vcd"
 
-# Open the waveform file in GTKWave
-wave: 
-	gtkwave sim.vcd
+# Test with iverilog (quick test without Verilator)
+test-iverilog: ${VMEM}
+	@echo "Quick test with iverilog..."
+	iverilog -g2012 -DLOAD_FROM_FILE \
+		$(VERILOG_SOURCES) \
+		src/testbench/tb_cpu.v -o test_cpu
+	./test_cpu
+	@rm -f test_cpu
+	@echo "iverilog test complete!"
+
+# Test without toolchain (hand-coded program)
+test-no-toolchain:
+	@echo "Testing CPU with hand-coded program (no toolchain needed)..."
+	iverilog -g2012 \
+		$(VERILOG_SOURCES) \
+		tb_main_c_macos.v -o test_handcoded
+	./test_handcoded
+	@rm -f test_handcoded
+	@echo "Hand-coded program test complete!"
+
+# Open waveform viewer
+wave: sim.vcd
+	@echo "Opening waveform viewer..."
+ifeq ($(OS),macOS)
+	@if command -v gtkwave >/dev/null 2>&1; then \
+		gtkwave sim.vcd; \
+	else \
+		echo "Install GTKWave: brew install --cask gtkwave"; \
+	fi
+else
+	@if command -v gtkwave >/dev/null 2>&1; then \
+		gtkwave sim.vcd; \
+	else \
+		echo "Install GTKWave: sudo apt-get install gtkwave"; \
+	fi
+endif
 
 # Clean up generated files
 clean:
-	rm -rf obj/ bin/ sim/ *.vcd *.log 
+	@echo "Cleaning up..."
+	rm -rf obj/ bin/ sim/Vcpu* *.vcd *.log 
+	@echo "Clean complete!"
 
-# The list of targets are not actual files to be created, but rather commands to be executed.
-.PHONY: all clean wave
+# Install help for missing toolchain
+install-help:
+	@echo "=================================================="
+	@echo "RISC-V Toolchain Installation Guide"
+	@echo "=================================================="
+	@echo ""
+	@echo "Current OS: $(DETECTED_OS)"
+	@echo ""
+ifeq ($(OS),Linux)
+	@echo "Linux Installation Options:"
+	@echo ""
+	@echo "Option 1 - Ubuntu/Debian (recommended):"
+	@echo "  sudo apt-get update"
+	@echo "  sudo apt-get install gcc-riscv64-unknown-elf"
+	@echo ""
+	@echo "Option 2 - Build from source:"
+	@echo "  git clone https://github.com/riscv/riscv-gnu-toolchain"
+	@echo "  cd riscv-gnu-toolchain"
+	@echo "  ./configure --prefix=$$HOME/riscv --with-arch=rv32gc"
+	@echo "  make"
+else
+	@echo "macOS Installation Options:"
+	@echo ""
+	@echo "Option 1 - Homebrew (recommended):"
+	@echo "  brew tap riscv-software-src/riscv" 
+	@echo "  brew install riscv-tools"
+	@echo ""
+	@echo "Option 2 - Pre-built binaries:"
+	@echo "  curl -L -O https://github.com/sifive/freedom-tools/releases/download/v2020.12.0-Toolchain.Only/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-apple-darwin.tar.gz"
+	@echo "  tar -xzf riscv64-unknown-elf-toolchain-*.tar.gz"
+	@echo "  export PATH=\"\$$PWD/riscv64-unknown-elf-toolchain-*/bin:\$$PATH\""
+endif
+	@echo ""
+	@echo "After installation, run: make check-toolchain"
+	@echo "=================================================="
+
+# Show available targets
+help:
+	@echo "=================================================="
+	@echo "Available Make Targets"
+	@echo "=================================================="
+	@echo "Build targets:"
+	@echo "  all              - Build everything and run simulation"
+	@echo "  ${VMLINUX}       - Build firmware ELF file"
+	@echo "  ${VMEM}          - Generate memory image"
+	@echo "  sim/Vcpu         - Compile Verilator simulator"
+	@echo ""
+	@echo "Test targets:"
+	@echo "  test-iverilog    - Quick test with iverilog"
+	@echo "  test-no-toolchain- Test without RISC-V toolchain"
+	@echo ""
+	@echo "Info targets:"
+	@echo "  info             - Show system information" 
+	@echo "  check-toolchain  - Check RISC-V toolchain"
+	@echo "  view-asm         - View generated assembly"
+	@echo "  wave             - Open waveform viewer"
+	@echo ""
+	@echo "Utility targets:"
+	@echo "  clean            - Remove generated files"
+	@echo "  install-help     - Show toolchain installation guide"
+	@echo "  help             - Show this help"
+	@echo "=================================================="
+
+# Phony targets
+.PHONY: all clean wave info check-toolchain view-asm test-iverilog test-no-toolchain install-help help
