@@ -39,19 +39,6 @@ module cpu(
     logic  [2:0]  funct3; // Instruction funct3
     logic  [6:0]  funct7; // Instruction funct7
 
-    // Instantiate the adder for PC + 4
-    adder_pc4 adder_pc4_init(
-        .pc(pc),
-        .pc_next(pc_plus4)
-    );
-
-    // Instantiate the adder for branch target address
-    adder_pc_imm adder_pc_imm_init(
-        .pc(pc),
-        .imm(imm),
-        .pc_next(pc_branch)
-    );
-
     // Instantiate the instruction memory
     memory instruction_memory(
         .clk(clk),
@@ -256,6 +243,8 @@ module cpu(
     end 
 
     // PC logic
+    assign pc_branch = pc + imm;
+    assign pc_plus4 = pc + 32'b4;
     always_comb begin 
         case (opcode)
             OPCODE_JAL: pc_next = pc_branch; // JAL
