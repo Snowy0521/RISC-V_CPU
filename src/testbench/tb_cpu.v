@@ -36,8 +36,20 @@ module tb_cpu;
         begin
             @(posedge clk); // Execute
             @(negedge clk); // Wait for completion
-            #1; // Signals propagation
         end 
+    endtask
+
+    // Debug task to display internal signals
+    task debug_cpu_state();
+        begin
+            $display("--- DEBUG INFO ---");
+            $display("PC: 0x%h, Instruction: 0x%h", uut.pc, uut.instruction);
+            $display("Opcode: 0b%b, rs1: %0d, rs2: %0d, rd: %0d", uut.opcode, uut.rs1_addr, uut.rs2_addr, uut.rd_addr);
+            $display("ALU: a=0x%h, b=0x%h, control=0b%b, result=0x%h", uut.alu_a, uut.alu_b, uut.alu_control, uut.alu_result);
+            $display("Control: reg_we=%b, mem_to_reg=%b, alu_src=%b", uut.reg_write_enable, uut.mem_to_reg, uut.alu_src);
+            $display("Register data: rs1=0x%h, rs2=0x%h, rd_data=0x%h", uut.rs1_data, uut.rs2_data, uut.rd_data);
+            $display("------------------");
+        end
     endtask
 
     // Test sequence
@@ -58,7 +70,10 @@ module tb_cpu;
         uut.data_memory.mem[0] = 32'hDEADBEEF; // Data at address 0
 
         // Release reset and test load
+        //@(negedge clk);
+        #1;
         reset = 0;
+
         execute_instruction();
         check_result(32'hDEADBEEF, uut.reg_file.registers[1], "Load Word (lw x1, 0(x0))");
 
@@ -79,9 +94,13 @@ module tb_cpu;
         uut.reg_file.registers[2] = 32'h00000005; // x2 = 5
         uut.reg_file.registers[3] = 32'h0000000A; // x3 = 10
 
+        // Release reset
+        //@(negedge clk);
+        #1;
+        reset = 0;
+
         // Test ADD instruction
         uut.instruction_memory.mem[0] = 32'b0000000_00010_00001_000_00100_0110011; // add x4, x1, x2 (15 + 5 = 20)
-        reset = 0;
         execute_instruction();
         check_result(32'h00000014, uut.reg_file.registers[4], "ADD instruction (x4 = x1 + x2)");
 
@@ -116,6 +135,7 @@ module tb_cpu;
         uut.instruction_memory.mem[6] = 32'b111111111111_01001_000_01010_0010011; // addi x10, x9, -1 (1 + (-1) = 0)
         execute_instruction();
         check_result(32'h00000000, uut.reg_file.registers[10], "ADDI with negative (x10 = x9 + (-1))");
+        
 
         // ===== Test Case 4: Branch Instructions =====
         $display("\nTest Case 4: Branch Instructions");
@@ -125,7 +145,7 @@ module tb_cpu;
         uut.reg_file.registers[12] = 32'h00000007; // x12 = 7
 
         // Test BEQ (Branch if Equal) - should branch
-        uut.instruction_memory.mem[7] = 32'b000000000100_01100_01011_000_01000_1100011; // beq x11, x12, +8
+        uut.instruction_memory.mem[7] = 32'b000000000000_01100_01011_000_01000_1100011; // beq x11, x12, +8
         uut.instruction_memory.mem[8] = 32'b000000000001_00000_000_01101_0010011; // addi x13, x0, 1 (should be skipped)
         uut.instruction_memory.mem[9] = 32'b000000000010_00000_000_01110_0010011; // addi x14, x0, 2 (target)
         
@@ -170,24 +190,34 @@ module tb_cpu;
         uut.instruction_memory.mem[17] = 32'b000000000011_00000_000_11000_0010011; // addi x24, x0, 3 (target at 0x44)
         
         execute_instruction();
+
         check_result(32'h00000040, uut.reg_file.registers[22], "JALR return address saved");
         check_result(32'h00000044, uut.pc, "JALR jump to computed address");
 
         // ===== Test Case 6: Boundary Conditions =====
-        $display("\nTest Group 6: Boundary Conditions");
+        $display("\nTest case 6: Boundary Conditions");
+        // Setup for boundary tests
+        @(posedge clk);
+        reset = 1;
 
         // Test register x0 (should always be 0)
-        uut.instruction_memory.mem[18] = 32'b111111111111_00000_000_00000_0010011; // addi x0, x0, -1 (try to write -1 to x0)
+        uut.instruction_memory.mem[0] = 32'b111111111111_00000_000_00000_0010011; // addi x0, x0, -1 (try to write -1 to x0)
+
+        // Release reset
+        //@(negedge clk);
+        #1;
+        reset = 0;
+
         execute_instruction();
         check_result(32'h00000000, uut.reg_file.registers[0], "Register x0 always zero");
 
         // Test maximum positive immediate
-        uut.instruction_memory.mem[19] = 32'b011111111111_00000_000_11001_0010011; // addi x25, x0, 2047
+        uut.instruction_memory.mem[1] = 32'b011111111111_00000_000_11001_0010011; // addi x25, x0, 2047
         execute_instruction();
         check_result(32'h000007FF, uut.reg_file.registers[25], "Maximum positive immediate (2047)");
 
         // Test maximum negative immediate  
-        uut.instruction_memory.mem[20] = 32'b100000000000_00000_000_11010_0010011; // addi x26, x0, -2048
+        uut.instruction_memory.mem[2] = 32'b100000000000_00000_000_11010_0010011; // addi x26, x0, -2048
         execute_instruction();
         check_result(32'hFFFFF800, uut.reg_file.registers[26], "Maximum negative immediate (-2048)");
 
@@ -195,13 +225,13 @@ module tb_cpu;
         $display("\nTest Case 7: Memory Boundary Tests");
         
         // Test memory at boundary (word-aligned access)
-        uut.instruction_memory.mem[21] = 32'b000000000000_00000_010_11011_0000011; // lw x27, 0(x0)
+        uut.instruction_memory.mem[3] = 32'b000000000000_00000_010_11011_0000011; // lw x27, 0(x0)
         uut.data_memory.mem[0] = 32'h12345678;
         execute_instruction();
         check_result(32'h12345678, uut.reg_file.registers[27], "Memory boundary load");
 
         // Test store at boundary
-        uut.instruction_memory.mem[22] = 32'b0000000_11011_00000_010_11111_0100011; // sw x27, 124(x0) - near end
+        uut.instruction_memory.mem[4] = 32'b0000011_11011_00000_010_11100_0100011; // sw x27, 124(x0) - near end
         execute_instruction();
         check_result(32'h12345678, uut.data_memory.mem[31], "Memory boundary store");
 
@@ -210,8 +240,8 @@ module tb_cpu;
         
         // Test load-use sequence
         uut.data_memory.mem[10] = 32'h000000FF;
-        uut.instruction_memory.mem[23] = 32'b000000101000_00000_010_11100_0000011; // lw x28, 40(x0)
-        uut.instruction_memory.mem[24] = 32'b000000000001_11100_000_11101_0010011; // addi x29, x28, 1
+        uut.instruction_memory.mem[5] = 32'b000000101000_00000_010_11100_0000011; // lw x28, 40(x0)
+        uut.instruction_memory.mem[6] = 32'b000000000001_11100_000_11101_0010011; // addi x29, x28, 1
         
         execute_instruction(); // Load
         check_result(32'h000000FF, uut.reg_file.registers[28], "Load in load-use sequence");

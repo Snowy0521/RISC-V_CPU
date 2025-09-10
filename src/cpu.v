@@ -244,7 +244,8 @@ module cpu(
 
     // PC logic
     assign pc_branch = pc + imm;
-    assign pc_plus4 = pc + 32'b4;
+    assign pc_plus4 = pc + 32'd4;
+
     always_comb begin 
         case (opcode)
             OPCODE_JAL: pc_next = pc_branch; // JAL
