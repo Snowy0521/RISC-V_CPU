@@ -23,7 +23,7 @@ int main(int argc, char** argv, char** env){
         top->clk = clk;
 
         // Toggle reset after 100 time units
-        top->rst = (sim_time < 100) ? 1 : 0;
+        top->reset = (sim_time < 100) ? 1 : 0;
 
         top->eval();
         tfp->dump(sim_time);

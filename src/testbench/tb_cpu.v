@@ -145,7 +145,7 @@ module tb_cpu;
         uut.reg_file.registers[12] = 32'h00000007; // x12 = 7
 
         // Test BEQ (Branch if Equal) - should branch
-        uut.instruction_memory.mem[7] = 32'b000000000000_01100_01011_000_01000_1100011; // beq x11, x12, +8
+        uut.instruction_memory.mem[7] = 32'b0000000_01100_01011_000_01000_1100011; // beq x11, x12, +8
         uut.instruction_memory.mem[8] = 32'b000000000001_00000_000_01101_0010011; // addi x13, x0, 1 (should be skipped)
         uut.instruction_memory.mem[9] = 32'b000000000010_00000_000_01110_0010011; // addi x14, x0, 2 (target)
         
@@ -160,7 +160,7 @@ module tb_cpu;
         uut.reg_file.registers[15] = 32'h00000003; // x15 = 3
         uut.reg_file.registers[16] = 32'h00000003; // x16 = 3 (equal values)
         
-        uut.instruction_memory.mem[10] = 32'b000000000100_10000_01111_001_01001_1100011; // bne x15, x16, +8
+        uut.instruction_memory.mem[10] = 32'b0000100_10000_01111_001_01001_1100011; // bne x15, x16, +8
         uut.instruction_memory.mem[11] = 32'b000000000011_00000_000_10001_0010011; // addi x17, x0, 3 (should execute)
         
         execute_instruction();

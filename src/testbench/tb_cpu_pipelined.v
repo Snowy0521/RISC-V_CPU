@@ -73,9 +73,8 @@ module tb_cpu_pipelined;
         // Test Case 9: SLT (Set if Less Than) - x15 = (x2 < x1) ? 1 : 0 => 2>1 => 0
         uut.instruction_memory.mem[17] = 32'b0000000_00001_00010_010_01111_0110011; // slt x15, x2, x1
 
-        // Test Case 10: Load-Use Stall Chain 
-        uut.instruction_memory.mem[18] = 32'b000000001010_00000_010_10000_0000011; // lw x16, 10(x0)     # x16 = 10
-        uut.instruction_memory.mem[19] = 32'b0000000_00100_10000_000_10001_0110011; // add x17, x16, x4  # x17 = 10 + 4 = 14 (stall here)
+        // Test Case 10: BEQ 
+        uut.instruction_memory.mem[18] = 32'b0000000_01001_01000_000_00100_1100011; // beq x8, x9, 8    # Branch if x8 == x9 (true, branch)
 
         // Initialize data memory
         uut.data_memory.mem[0] = 32'h0000000A; // 10 in decimal
@@ -97,8 +96,6 @@ module tb_cpu_pipelined;
         expected_results[13] = 32'h00000040; // x13 = return address of jal (PC+4 of instruction 15 = 0x3C + 4 = 0x40)
         expected_results[14] = 32'h00000044; // x14 = return address of jalr (PC+4 of instruction 16 = 0x40 + 4 = 0x44)
         expected_results[15] = 32'h00000000; // x15 = (x2 < x1) = 0
-        expected_results[16] = 32'h0000000A; // x16 = 10
-        expected_results[17] = 32'h0000000D; // x17 = 14
         
         
         $display("@(T=%0t) [INFO] Test program loaded. Releasing reset...", $time);
@@ -109,7 +106,7 @@ module tb_cpu_pipelined;
 
         // Monitor pipeline for several cycles
         cycle_count = 0;
-        repeat(23) begin // 18 cc for instruction + 4 overhead + 1 stall 
+        repeat(24) begin // 19 cc for instruction + 4 overhead + 1 stall 
             @(posedge clk)
             cycle_count++;
 

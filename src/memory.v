@@ -22,8 +22,19 @@ module memory(
 
     // Initialize memory to zero
     initial begin 
+        // Initialize all memory to zero first
+        for (integer i = 0; i < 2048; i = i + 1) begin
+            mem[i] = 32'h00000000;
+        end
+        
+        // Try to load from file, but don't fail if file doesn't exist
         $readmemh("bin/firmware.img", mem); // Load memory from a file
     end 
 
-
+    // Handle unused address bits (word-aligned memory access)
+    // We only use addr[12:2] for word addressing, bits [31:13,1:0] are unused
+    wire _unused_ok = 1'b0 && &{1'b0,
+                        addr[31:13],  // Upper address bits unused (8KB memory limit)
+                        addr[1:0],    // Lower 2 bits unused (word-aligned access)
+                        1'b0};
 endmodule
