@@ -167,15 +167,33 @@ sim.vcd: sim/Vcpu
 	@echo "Simulation complete! Waveform: sim.vcd"
 
 # Test with iverilog (quick test without Verilator)
-test-iverilog: ${VMEM}
-	@echo "Quick test with iverilog..."
-	@mkdir -p src/build
-	iverilog -g2012 -DLOAD_FROM_FILE \
-		$(VERILOG_SOURCES) \
-		src/testbench/tb_cpu.v -o build/test_cpu
-	./build/test_cpu
-	@rm -f build/test_cpu
+test-cpu: ${VMEM}
+	@echo "Testing CPU module..."
+	cd src && iverilog -g2012 cpu.v alu.v register_file.v memory.v testbench/tb_cpu.v && vvp a.out && rm a.out
 	@echo "iverilog test complete!"
+
+# Test individual modules
+test-alu:
+	@echo "Testing ALU module..."
+	cd src && iverilog -g2012 alu.v testbench/tb_alu.v && vvp a.out && rm a.out
+	@echo "ALU test complete!"
+
+test-regfile:
+	@echo "Testing register file module..."
+	cd src && iverilog -g2012 register_file.v testbench/tb_register_file.v && vvp a.out && rm a.out
+	@echo "Register file test complete!"
+
+test-memory:
+	@echo "Testing memory module..."
+	@mkdir -p bin
+	@echo "00000000" > bin/firmware.img
+	cd src && iverilog -g2012 memory.v testbench/tb_memory.v && vvp a.out && rm a.out
+	@echo "Memory test complete!"
+
+# Test all modules
+test-modules: test-cpu test-alu test-regfile test-memory
+	@echo "All module tests complete!"
+
 
 # Open waveform viewer
 wave: sim.vcd
@@ -247,8 +265,12 @@ help:
 	@echo "  bin/firmware.img - Generate memory image"
 	@echo "  sim/Vcpu         - Compile Verilator simulator"
 	@echo ""
-	@echo "Test targets:"
-	@echo "  test-iverilog    - Quick test with iverilog"
+	@echo "Quick Test targets only with iverilog:"
+	@echo "  test-modules     - Testing all modules..."
+	@echo "  test-cpu         - Testing CPU module..."
+	@echo "  test-alu         - Testing ALU module..."
+	@echo "  test-regfile     - Testing register file module..."
+	@echo "  test-memory      - Testing memory module..."
 	@echo ""
 	@echo "Info targets:"
 	@echo "  info             - Show system information" 
