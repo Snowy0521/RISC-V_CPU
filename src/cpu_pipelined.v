@@ -22,7 +22,7 @@ module cpu_pipelined(
     logic  [1:0] id_ex_alu_op;
     logic        id_ex_branch;
     logic  [2:0] id_ex_funct3;
-    logic        id_ex_funct7_bit5; // For distinguishing ADD/SUB
+    logic  [6:0] id_ex_funct7; // For distinguishing ADD/SUB
     logic  [6:0] id_ex_opcode;
     logic  [4:0] id_ex_rs1_addr; 
     logic  [4:0] id_ex_rs2_addr; 
@@ -43,6 +43,7 @@ module cpu_pipelined(
     logic [6:0]  ex_mem_opcode;
     logic [4:0]  ex_mem_rd_addr;
     logic        ex_mem_reg_write_enable;
+    logic [2:0]  ex_mem_funct3;
 
     // MEM/WB Pipeline Register
     logic [31:0] mem_wb_alu_result;
@@ -57,44 +58,44 @@ module cpu_pipelined(
     logic [31:0] pc; // Program counter
     logic [31:0] pc_plus4; // PC + 4 for next instruction fetch
     logic [31:0] pc_next; // Next program counter
-    logic        pc_src; // PC source select for branch
     logic [31:0] instruction; // Current instruction
-    logic        branch_taken_predicted; // Branch prediction signal
     logic        branch_taken_actual; // Actual branch taken signal
     logic        flush; // Flush signal 
 
-    // Instantiate the adder for PC + 4
-    adder_pc4 adder_pc4_init(
-        .pc(pc),
-        .pc_next(pc_plus4)
-    );
+    assign pc_plus4 = pc + 32'd4;
+    
+    // Branch logic 
+    logic branch_condition_met;
+    always_comb begin
+        branch_condition_met = 1'b0;
+        if (ex_mem_branch) begin 
+            case (ex_mem_funct3)
+                3'b000: branch_condition_met = ex_mem_zero; // BEQ: branch if equal
+                3'b001: branch_condition_met = ~ex_mem_zero; // BNE: branch if not equal 
+                3'b100: branch_condition_met = ex_mem_alu_result[31]; // BLT: branch if less than 
+                3'b101: branch_condition_met = ex_mem_zero | ~ex_mem_alu_result[31]; // BGE: branch if greater or equal
+                default: branch_condition_met = 1'b0;
+            endcase
+        end 
+    end 
 
-    assign pc_src = ex_mem_branch & ex_mem_zero;
-    assign branch_taken_actual = pc_src;
-    assign branch_taken_predicted = 1'b0; // Always predict not taken
-    assign flush = branch_taken_actual & ~branch_taken_predicted;
+    assign branch_taken_actual = branch_condition_met;
+    assign flush = branch_taken_actual || (ex_mem_opcode == OPCODE_JAL) || (ex_mem_opcode == OPCODE_JALR);
 
     // PC logic
     always_comb begin
         if (flush) begin
-            pc_next = ex_mem_pc_branch;
+            case (ex_mem_opcode)
+                OPCODE_JAL: pc_next = ex_mem_pc_branch;
+                OPCODE_JALR: pc_next = ex_mem_alu_result & ~32'b1;
+                default: pc_next = branch_taken_actual ? ex_mem_pc_branch : pc_plus4;
+            endcase
         end else if (stall) begin
             pc_next = pc; // Hold the PC value during stall
         end else begin
             pc_next = pc_plus4; // Default: PC + 4
         end 
     end
-
-    // JAL and JALR override
-    always_comb begin 
-        case(ex_mem_opcode)
-            OPCODE_JAL:
-                pc_next = ex_mem_pc_branch;
-            OPCODE_JALR:
-                pc_next = ex_mem_alu_result & ~1; // Ensure the least significant bit
-            default: ; // Do nothing
-        endcase
-    end 
 
     // PC update
     always_ff @(posedge clk) begin
@@ -137,7 +138,7 @@ module cpu_pipelined(
     logic [31:0] imm; // Immediate values
     logic [6:0]  opcode;
     logic [2:0]  funct3;
-    logic        funct7_bit5;  
+    logic [6:0]  funct7; // Instruction funct7
 
     // Control signals
     logic        alu_src; // ALU source 2 select (0: register, 1: immediate)
@@ -166,7 +167,7 @@ module cpu_pipelined(
     assign funct3 = if_id_instruction[14:12];
     assign rs1_addr = if_id_instruction[19:15];
     assign rs2_addr = if_id_instruction[24:20];
-    assign funct7_bit5 = if_id_instruction[30]; // funct7[5] for distinguishing ADD/SUB
+    assign funct7 = if_id_instruction[31:25]; 
 
     // Immediate generation (I-type, S-type, B-type, U-type, J-type)
     always_comb begin
@@ -203,62 +204,32 @@ module cpu_pipelined(
                 mem_to_reg = 1'b1; // Memory data to register
                 reg_write_enable = 1'b1; // Enable register write
                 mem_read_enable = 1'b1; // Enable memory read
-                //mem_write_enable = 1'b0; // Disable memory write
-                //branch = 1'b0; // No branch
                 alu_op = 2'b00; // ADD operation
             end
             OPCODE_STORE: begin // Store instructions
                 alu_src = 1'b1; // Immediate
-                //mem_to_reg = 1'bx; // Don't care
-                //reg_write_enable = 1'b0; // Disable register write
-                //mem_read_enable = 1'b0; // Disable memory read
                 mem_write_enable = 1'b1; // Enable memory write
-                //branch = 1'b0; // No branch
                 alu_op = 2'b00; // ADD operation
             end
             OPCODE_ARITH: begin // I-type arithmetic instructions
                 alu_src = 1'b1; // Immediate
-                //mem_to_reg = 1'b0; // ALU result to register
                 reg_write_enable = 1'b1; // Enable register write
-                //mem_read_enable = 1'b0; // Disable memory read
-                //mem_write_enable = 1'b0; // Disable memory write
-                //branch = 1'b0; // No branch
                 alu_op = 2'b10; // R-type arithmetic
             end
             OPCODE_R_TYPE: begin // R-type arithmetic instructions
-                //alu_src = 1'b0; // Register
-                //mem_to_reg = 1'b0; // ALU result to register
                 reg_write_enable = 1'b1; // Enable register write
-                //mem_read_enable = 1'b0; // Disable memory read
-                //mem_write_enable = 1'b0; // Disable memory write
-                //branch = 1'b0; // No branch
                 alu_op = 2'b10; // R-type arithmetic
             end
             OPCODE_BRANCH: begin // Branch instructions
-                //alu_src = 1'b0; // Register
-                //mem_to_reg = 1'bx; // Don't care
-                //reg_write_enable = 1'b0; // Disable register write
-                //mem_read_enable = 1'b0; // Disable memory read
-                //mem_write_enable = 1'b0; // Disable memory Write
                 branch = 1'b1; // Enable branch
                 alu_op = 2'b01; // SUB operation
             end 
             OPCODE_JAL: begin // JAL instruction
-                //alu_src = 1'bx; // Don't care
-                //mem_to_reg = 1'b0; // register Rd = PC + 4
                 reg_write_enable = 1'b1; // Enable register write
-                //mem_read_enable = 1'b0; // Disable memory read
-                //mem_write_enable = 1'b0; // Disable memory write
-                //branch = 1'bx; // Don't care
-                //alu_op = 2'bxx; // Don't care
             end
             OPCODE_JALR: begin // JALR instruction
                 alu_src = 1'b1; // Immediate
-                //mem_to_reg = 1'b0; // register Rd = PC + 4
                 reg_write_enable = 1'b1; // Enable register write
-                //mem_read_enable = 1'b0; // Disable memory read
-                //mem_write_enable = 1'b0; // Disable memory write
-                //branch = 1'bx; // No branch
                 alu_op = 2'b00; // ADD operation
             end
             default: begin 
@@ -315,7 +286,7 @@ module cpu_pipelined(
             id_ex_alu_op <= 2'b00;
             id_ex_branch <= 1'b0;
             id_ex_funct3 <= 3'b000;
-            id_ex_funct7_bit5 <= 1'b0;
+            id_ex_funct7 <= 7'b0000000;
             id_ex_opcode <= 7'b0000000;
             id_ex_reg_write_enable <= 1'b0;
         end else begin
@@ -328,7 +299,7 @@ module cpu_pipelined(
             id_ex_rd_addr <= rd_addr;
             id_ex_pc_plus4 <= if_id_pc_plus4;
             id_ex_funct3 <= funct3;
-            id_ex_funct7_bit5 <= funct7_bit5;
+            id_ex_funct7 <= funct7;
             id_ex_opcode <= opcode;
 
             // Control signals update
@@ -357,6 +328,7 @@ module cpu_pipelined(
     logic        alu_zero; // ALU zero flag
 
     logic [31:0] pc_branch; // Branch target address
+    assign pc_branch = id_ex_pc + id_ex_imm;
 
     // ALU control logic
     always_comb begin
@@ -365,7 +337,7 @@ module cpu_pipelined(
             2'b01: alu_control = 4'b0110; // SUB for branch
             2'b10: begin // R-type or I-type arithmetic
                 case (id_ex_funct3)
-                    3'b000: alu_control = id_ex_funct7_bit5 ? 4'b0110 : 4'b0010; // ADD/SUB    
+                    3'b000: alu_control = (id_ex_funct7 == 7'b0100000) ? 4'b0110 : 4'b0010; // ADD/SUB    
                     3'b111: alu_control = 4'b0000; // AND
                     3'b110: alu_control = 4'b0001; // OR
                     3'b010: alu_control = 4'b0111; // SLT
@@ -384,13 +356,6 @@ module cpu_pipelined(
         .alu_control(alu_control),
         .result(alu_result),
         .zero(alu_zero)
-    );
-
-    // Instantiate the adder for branch target address
-    adder_pc_imm adder_pc_imm_inst(
-        .pc(id_ex_pc),
-        .imm(id_ex_imm),
-        .pc_next(pc_branch)
     );
 
     // EX/MEM Pipeline Register Update
@@ -423,6 +388,7 @@ module cpu_pipelined(
             ex_mem_mem_to_reg <= id_ex_mem_to_reg;
             ex_mem_opcode <= id_ex_opcode;
             ex_mem_reg_write_enable <= id_ex_reg_write_enable;
+            ex_mem_funct3 <= id_ex_funct3;
         end
     end 
 
@@ -496,7 +462,7 @@ module cpu_pipelined(
             mem_wb_mem_to_reg <= 1'b0;
             mem_wb_rd_addr <= 5'b0;
             mem_wb_reg_write_enable <= 1'b0;
-            mem_wb_pc_plus4 <= 1'b0;
+            mem_wb_pc_plus4 <= 32'b0;
         end else begin
             mem_wb_alu_result <= ex_mem_alu_result;
             mem_wb_mem_rdata <= mem_rdata;

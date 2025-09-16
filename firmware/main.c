@@ -1,3 +1,4 @@
+/*
 // Test 4: Array and loop
 int main() {
     int arr[5] = {1, 2, 3, 4, 5};
@@ -7,6 +8,7 @@ int main() {
     }
     return sum; 
 }
+*/
 
 
 /*
@@ -21,16 +23,16 @@ int main() {
 }
 */
 
-/*
+
 // Test 2: for loop
 int main(){
     int sum = 0;
-    for(int i=1; i<=10; i++){
+    for(int i=1; i<=4; i++){
         sum += i;   
     }
     return sum;
 }
-*/
+
 
 /*
 // Test 1: simple add
