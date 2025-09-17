@@ -7,6 +7,7 @@ module cpu_pipelined(
     logic [31:0] if_id_pc;
     logic [31:0] if_id_instruction;
     logic [31:0] if_id_pc_plus4; 
+    logic        if_id_valid;
 
     // ID/EX Pipeline Register
     logic [31:0] id_ex_pc;
@@ -14,6 +15,7 @@ module cpu_pipelined(
     logic [31:0] id_ex_rs2_data;    
     logic [31:0] id_ex_imm;
     logic [31:0] id_ex_pc_plus4;
+    logic        id_ex_valid;
 
     logic        id_ex_alu_src;
     logic        id_ex_mem_to_reg;
@@ -34,6 +36,7 @@ module cpu_pipelined(
     logic [31:0] ex_mem_alu_result;
     logic [31:0] ex_mem_rs2_data; // For store instruction
     logic [31:0] ex_mem_pc_plus4;
+    logic        ex_mem_valid; 
 
     logic        ex_mem_zero;
     logic        ex_mem_branch;
@@ -53,22 +56,41 @@ module cpu_pipelined(
     logic [4:0]  mem_wb_rd_addr;
     logic        mem_wb_reg_write_enable;
     logic [31:0] mem_wb_pc_plus4;
+    logic        mem_wb_valid;
 
     // ==================================== IF Stage ====================================
     logic [31:0] pc; // Program counter
     logic [31:0] pc_plus4; // PC + 4 for next instruction fetch
     logic [31:0] pc_next; // Next program counter
     logic [31:0] instruction; // Current instruction
-    logic        branch_taken_actual; // Actual branch taken signal
     logic        flush; // Flush signal 
 
     assign pc_plus4 = pc + 32'd4;
+
+    // Jump in EX Stage
+    logic        jump_taken_ex;
+    logic [31:0] jump_target_ex;
+
+    always_comb begin
+        jump_taken_ex = 1'b0;
+        jump_target_ex = 32'b0;
+
+        if (id_ex_valid) begin
+            if(id_ex_opcode == OPCODE_JAL) begin
+                jump_taken_ex = 1'b1;
+                jump_target_ex = id_ex_pc + id_ex_imm; 
+            end else if (id_ex_opcode == OPCODE_JALR) begin
+                jump_taken_ex = 1'b1;
+                jump_target_ex = (alu_a + id_ex_imm) & ~32'b1;
+            end 
+        end 
+    end 
     
-    // Branch logic 
+    // Branch logic in MEM stage
     logic branch_condition_met;
     always_comb begin
         branch_condition_met = 1'b0;
-        if (ex_mem_branch) begin 
+        if (ex_mem_valid && ex_mem_branch) begin 
             case (ex_mem_funct3)
                 3'b000: branch_condition_met = ex_mem_zero; // BEQ: branch if equal
                 3'b001: branch_condition_met = ~ex_mem_zero; // BNE: branch if not equal 
@@ -79,17 +101,14 @@ module cpu_pipelined(
         end 
     end 
 
-    assign branch_taken_actual = branch_condition_met;
-    assign flush = branch_taken_actual || (ex_mem_opcode == OPCODE_JAL) || (ex_mem_opcode == OPCODE_JALR);
+    assign flush = jump_taken_ex || branch_condition_met;
 
     // PC logic
     always_comb begin
-        if (flush) begin
-            case (ex_mem_opcode)
-                OPCODE_JAL: pc_next = ex_mem_pc_branch;
-                OPCODE_JALR: pc_next = ex_mem_alu_result & ~32'b1;
-                default: pc_next = branch_taken_actual ? ex_mem_pc_branch : pc_plus4;
-            endcase
+        if (jump_taken_ex) begin
+            pc_next = jump_target_ex;
+        end else if (branch_condition_met) begin 
+            pc_next = ex_mem_pc_branch;
         end else if (stall) begin
             pc_next = pc; // Hold the PC value during stall
         end else begin
@@ -122,10 +141,12 @@ module cpu_pipelined(
             if_id_pc <= 32'b0;
             if_id_instruction <= 32'b0;
             if_id_pc_plus4 <= 32'b0;
+            if_id_valid <= 1'b0;
         end else if (!stall) begin
             if_id_pc <= pc;
             if_id_instruction <= instruction;
             if_id_pc_plus4 <= pc_plus4;
+            if_id_valid <= 1'b1;
         end
         // If stall, hold the values (do not update)
     end 
@@ -198,43 +219,45 @@ module cpu_pipelined(
         branch = 1'b0;
         alu_op = 2'b00;
 
-        case(opcode)
-            OPCODE_LOAD: begin // Load instructions
-                alu_src = 1'b1; // Immediate
-                mem_to_reg = 1'b1; // Memory data to register
-                reg_write_enable = 1'b1; // Enable register write
-                mem_read_enable = 1'b1; // Enable memory read
-                alu_op = 2'b00; // ADD operation
-            end
-            OPCODE_STORE: begin // Store instructions
-                alu_src = 1'b1; // Immediate
-                mem_write_enable = 1'b1; // Enable memory write
-                alu_op = 2'b00; // ADD operation
-            end
-            OPCODE_ARITH: begin // I-type arithmetic instructions
-                alu_src = 1'b1; // Immediate
-                reg_write_enable = 1'b1; // Enable register write
-                alu_op = 2'b10; // R-type arithmetic
-            end
-            OPCODE_R_TYPE: begin // R-type arithmetic instructions
-                reg_write_enable = 1'b1; // Enable register write
-                alu_op = 2'b10; // R-type arithmetic
-            end
-            OPCODE_BRANCH: begin // Branch instructions
-                branch = 1'b1; // Enable branch
-                alu_op = 2'b01; // SUB operation
-            end 
-            OPCODE_JAL: begin // JAL instruction
-                reg_write_enable = 1'b1; // Enable register write
-            end
-            OPCODE_JALR: begin // JALR instruction
-                alu_src = 1'b1; // Immediate
-                reg_write_enable = 1'b1; // Enable register write
-                alu_op = 2'b00; // ADD operation
-            end
-            default: begin 
-            end
-        endcase
+        if(if_id_valid) begin
+            case(opcode)
+                OPCODE_LOAD: begin // Load instructions
+                    alu_src = 1'b1; // Immediate
+                    mem_to_reg = 1'b1; // Memory data to register
+                    reg_write_enable = 1'b1; // Enable register write
+                    mem_read_enable = 1'b1; // Enable memory read
+                    alu_op = 2'b00; // ADD operation
+                end
+                OPCODE_STORE: begin // Store instructions
+                    alu_src = 1'b1; // Immediate
+                    mem_write_enable = 1'b1; // Enable memory write
+                    alu_op = 2'b00; // ADD operation
+                end
+                OPCODE_ARITH: begin // I-type arithmetic instructions
+                    alu_src = 1'b1; // Immediate
+                    reg_write_enable = 1'b1; // Enable register write
+                    alu_op = 2'b10; // R-type arithmetic
+                end
+                OPCODE_R_TYPE: begin // R-type arithmetic instructions
+                    reg_write_enable = 1'b1; // Enable register write
+                    alu_op = 2'b10; // R-type arithmetic
+                end
+                OPCODE_BRANCH: begin // Branch instructions
+                    branch = 1'b1; // Enable branch
+                    alu_op = 2'b01; // SUB operation
+                end 
+                OPCODE_JAL: begin // JAL instruction
+                    reg_write_enable = 1'b1; // Enable register write
+                end
+                OPCODE_JALR: begin // JALR instruction
+                    alu_src = 1'b1; // Immediate
+                    reg_write_enable = 1'b1; // Enable register write
+                    alu_op = 2'b00; // ADD operation
+                end
+                default: begin 
+                end
+            endcase
+        end  
     end 
 
     // ID Stage Forwarding: Handle MEM/WB -> ID forwarding
@@ -244,7 +267,7 @@ module cpu_pipelined(
         rs2_data_final = rs2_data;
         
         // Forward from MEM/WB stage if there's a match
-        if (mem_wb_reg_write_enable && (mem_wb_rd_addr != 0)) begin
+        if (mem_wb_valid && mem_wb_reg_write_enable && (mem_wb_rd_addr != 0)) begin
             if (mem_wb_rd_addr == rs1_addr) begin
                 rs1_data_final = rd_data_wb;
             end
@@ -257,7 +280,7 @@ module cpu_pipelined(
     // Instantiate the register file
     register_file register_file_init(
         .clk(clk),
-        .we(mem_wb_reg_write_enable), // Write enable from WB stage
+        .we(mem_wb_valid && mem_wb_reg_write_enable), // Write enable from WB stage
         .raddr1(rs1_addr),
         .raddr2(rs2_addr),
         .waddr(mem_wb_rd_addr), 
@@ -268,7 +291,7 @@ module cpu_pipelined(
 
     // ID/EX Pipeline Register Update
     always_ff @(posedge clk) begin
-        if (reset || stall || flush) begin
+        if (reset) begin
             id_ex_pc <= 32'b0;
             id_ex_rs1_data <= 32'b0;
             id_ex_rs2_data <= 32'b0;
@@ -277,17 +300,27 @@ module cpu_pipelined(
             id_ex_rs2_addr <= 5'b0;
             id_ex_rd_addr <= 5'b0;
             id_ex_pc_plus4 <= 32'b0;
+            id_ex_funct3 <= 3'b000;
+            id_ex_funct7 <= 7'b0000000;
+            id_ex_opcode <= 7'b0000000;
 
             // Control signals reset
+            id_ex_valid <= 1'b0;
             id_ex_alu_src <= 1'b0;
             id_ex_mem_to_reg <= 1'b0;
             id_ex_mem_read_enable <= 1'b0;
             id_ex_mem_write_enable <= 1'b0;
             id_ex_alu_op <= 2'b00;
             id_ex_branch <= 1'b0;
-            id_ex_funct3 <= 3'b000;
-            id_ex_funct7 <= 7'b0000000;
-            id_ex_opcode <= 7'b0000000;
+            id_ex_reg_write_enable <= 1'b0;
+        end else if (stall || flush) begin
+            id_ex_valid <= 1'b0;
+            id_ex_alu_src <= 1'b0;
+            id_ex_mem_to_reg <= 1'b0;
+            id_ex_mem_read_enable <= 1'b0;
+            id_ex_mem_write_enable <= 1'b0;
+            id_ex_alu_op <= 2'b00;
+            id_ex_branch <= 1'b0;
             id_ex_reg_write_enable <= 1'b0;
         end else begin
             id_ex_pc <= if_id_pc;
@@ -303,6 +336,7 @@ module cpu_pipelined(
             id_ex_opcode <= opcode;
 
             // Control signals update
+            id_ex_valid <= if_id_valid;
             id_ex_alu_src <= alu_src;
             id_ex_mem_to_reg <= mem_to_reg;
             id_ex_mem_read_enable <= mem_read_enable;
@@ -315,7 +349,7 @@ module cpu_pipelined(
 
     // -------------------------------- Hazard Detection Unit --------------------------------
     logic stall; // Stall signal
-    assign stall = id_ex_mem_read_enable && 
+    assign stall = id_ex_valid && id_ex_mem_read_enable && 
                    ((id_ex_rd_addr == rs1_addr) || (id_ex_rd_addr == rs2_addr)) && (id_ex_rd_addr != 0);
 
     // ==================================== EX Stage ====================================
@@ -368,6 +402,7 @@ module cpu_pipelined(
             ex_mem_rd_addr <= 5'b0;
             ex_mem_pc_plus4 <= 32'b0;
             
+            ex_mem_valid <= 1'b0;
             ex_mem_branch <= 1'b0;
             ex_mem_mem_read_enable <= 1'b0;
             ex_mem_mem_write_enable <= 1'b0;
@@ -382,6 +417,7 @@ module cpu_pipelined(
             ex_mem_rd_addr <= id_ex_rd_addr;
             ex_mem_pc_plus4 <= id_ex_pc_plus4;
 
+            ex_mem_valid <= id_ex_valid;
             ex_mem_branch <= id_ex_branch;
             ex_mem_mem_read_enable <= id_ex_mem_read_enable;
             ex_mem_mem_write_enable <= id_ex_mem_write_enable;
@@ -398,10 +434,10 @@ module cpu_pipelined(
 
     // Forwarding logic for ALU operand A
     always_comb begin 
-        if (ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs1_addr)) begin 
+        if (ex_mem_valid && ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs1_addr)) begin 
             forward_a = 2'b10; // Forward from EX/MEM
-        end else if (mem_wb_reg_write_enable && (mem_wb_rd_addr != 0) && (mem_wb_rd_addr == id_ex_rs1_addr) && 
-        !(ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs1_addr))) begin 
+        end else if (mem_wb_valid && mem_wb_reg_write_enable && (mem_wb_rd_addr != 0) && (mem_wb_rd_addr == id_ex_rs1_addr) && 
+        !(ex_mem_valid && ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs1_addr))) begin 
             forward_a = 2'b01; // Forward from MEM/WB
         end else begin 
             forward_a = 2'b00; // No forwarding
@@ -410,10 +446,10 @@ module cpu_pipelined(
 
     // Forwarding logic for ALU operand B
     always_comb begin 
-        if (ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs2_addr)) begin 
+        if (ex_mem_valid && ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs2_addr)) begin 
             forward_b = 2'b10; // Forward from EX/MEM
-        end else if (mem_wb_reg_write_enable && (mem_wb_rd_addr != 0) && (mem_wb_rd_addr == id_ex_rs2_addr) && 
-        !(ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs2_addr))) begin 
+        end else if (mem_wb_valid && mem_wb_reg_write_enable && (mem_wb_rd_addr != 0) && (mem_wb_rd_addr == id_ex_rs2_addr) && 
+        !(ex_mem_valid && ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs2_addr))) begin 
             forward_b = 2'b01; // Forward from MEM/WB
         end else begin 
             forward_b = 2'b00; // No forwarding
@@ -446,8 +482,8 @@ module cpu_pipelined(
     // Instantiate the data memory
     memory data_memory(
         .clk(clk),
-        .mem_read(ex_mem_mem_read_enable),
-        .mem_write(ex_mem_mem_write_enable),
+        .mem_read(ex_mem_valid && ex_mem_mem_read_enable),
+        .mem_write(ex_mem_valid && ex_mem_mem_write_enable),
         .addr(ex_mem_alu_result),
         .wdata(ex_mem_rs2_data),
         .rdata(mem_rdata)
@@ -463,6 +499,7 @@ module cpu_pipelined(
             mem_wb_rd_addr <= 5'b0;
             mem_wb_reg_write_enable <= 1'b0;
             mem_wb_pc_plus4 <= 32'b0;
+            mem_wb_valid <= 1'b0;
         end else begin
             mem_wb_alu_result <= ex_mem_alu_result;
             mem_wb_mem_rdata <= mem_rdata;
@@ -471,6 +508,7 @@ module cpu_pipelined(
             mem_wb_rd_addr <= ex_mem_rd_addr;
             mem_wb_reg_write_enable <= ex_mem_reg_write_enable;
             mem_wb_pc_plus4 <= ex_mem_pc_plus4;
+            mem_wb_valid <= ex_mem_valid; 
         end
     end
 
