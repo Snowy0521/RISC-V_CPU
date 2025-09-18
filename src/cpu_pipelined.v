@@ -155,7 +155,6 @@ module cpu_pipelined(
 
     logic [4:0]  rs1_addr, rs2_addr, rd_addr; // Register addresses
     logic [31:0] rs1_data, rs2_data; // Register file data
-    logic [31:0] rs1_data_final, rs2_data_final; // Final data after ID stage forwarding 
     logic [31:0] imm; // Immediate values
     logic [6:0]  opcode;
     logic [2:0]  funct3;
@@ -260,23 +259,6 @@ module cpu_pipelined(
         end  
     end 
 
-    // ID Stage Forwarding: Handle MEM/WB -> ID forwarding
-    always_comb begin
-        // Default: use register file output
-        rs1_data_final = rs1_data;
-        rs2_data_final = rs2_data;
-        
-        // Forward from MEM/WB stage if there's a match
-        if (mem_wb_valid && mem_wb_reg_write_enable && (mem_wb_rd_addr != 0)) begin
-            if (mem_wb_rd_addr == rs1_addr) begin
-                rs1_data_final = rd_data_wb;
-            end
-            if (mem_wb_rd_addr == rs2_addr) begin
-                rs2_data_final = rd_data_wb;
-            end
-        end
-    end
-
     // Instantiate the register file
     register_file register_file_init(
         .clk(clk),
@@ -324,8 +306,8 @@ module cpu_pipelined(
             id_ex_reg_write_enable <= 1'b0;
         end else begin
             id_ex_pc <= if_id_pc;
-            id_ex_rs1_data <= rs1_data_final;
-            id_ex_rs2_data <= rs2_data_final;
+            id_ex_rs1_data <= rs1_data;
+            id_ex_rs2_data <= rs2_data;
             id_ex_imm <= imm;
             id_ex_rs1_addr <= rs1_addr;
             id_ex_rs2_addr <= rs2_addr;
