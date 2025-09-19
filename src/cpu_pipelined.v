@@ -126,7 +126,7 @@ module cpu_pipelined(
     end
 
     // Instantiate the instruction memory
-    memory instruction_memory(
+    memory_pipelined instruction_memory(
         .clk(clk),
         .mem_read(1'b1), // Instruction memory is read-only
         .mem_write(1'b0), // No write operation for instruction memory
@@ -260,7 +260,7 @@ module cpu_pipelined(
     end 
 
     // Instantiate the register file
-    register_file register_file_init(
+    register_file_pipelined register_file_init(
         .clk(clk),
         .we(mem_wb_valid && mem_wb_reg_write_enable), // Write enable from WB stage
         .raddr1(rs1_addr),
@@ -462,7 +462,7 @@ module cpu_pipelined(
     logic [31:0] mem_rdata; // Data read from memory
 
     // Instantiate the data memory
-    memory data_memory(
+    memory_pipelined data_memory(
         .clk(clk),
         .mem_read(ex_mem_valid && ex_mem_mem_read_enable),
         .mem_write(ex_mem_valid && ex_mem_mem_write_enable),

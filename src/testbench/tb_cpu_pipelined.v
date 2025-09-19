@@ -121,9 +121,16 @@ module tb_cpu_pipelined;
         uut.instruction_memory.mem[22] = 32'b0000000_00010_00001_111_10100_0110011; // and x20, x1, x2     # x20 = x1 & x2 = 0
         uut.instruction_memory.mem[23] = 32'b0000000_00010_00001_110_10101_0110011; // or x21, x1, x2      # x21 = x1 | x2 = 3
 
+        // Test Case 10: Double Load-Add Pattern
+        uut.instruction_memory.mem[24] = 32'b000000000100_10100_010_10110_0000011;  // lw x22, 4(x20)      # load from mem[1]
+        uut.instruction_memory.mem[25] = 32'b000000001100_10100_010_10111_0000011;  // lw x23, 12(x20)     # load from mem[3]
+        uut.instruction_memory.mem[26] = 32'b0000000_10111_10110_000_11000_0110011; // add x24, x22, x23   # x24 = x22 + x23
+
         // Initialize data memory
-        uut.data_memory.mem[0] = 32'h00000004; // 0 in decimal
+        uut.data_memory.mem[0] = 32'h00000004; 
+        uut.data_memory.mem[1] = 32'h00000008; 
         uut.data_memory.mem[2] = 32'h00000000; // Will be written to store x5
+        uut.data_memory.mem[3] = 32'h00000008; 
 
         $display("[INFO] Test program loaded. Starting execution...");
         $display("[INFO] Data memory[0] = 0x%h", uut.data_memory.mem[0]);
@@ -133,7 +140,7 @@ module tb_cpu_pipelined;
         $display("[INFO] Reset released. Starting execution...");
 
         // Monitor pipeline for several cycles
-        repeat(34) begin // 24 cc for instruction + 4 overhead + 1 stall + 1 JAL flush + 3 BEQ flush
+        repeat(38) begin // 27 cc for instruction + 4 overhead + 2 stall + 1 JAL flush + 3 BEQ flush
             @(posedge clk);
             cycle_count++;
             //if (cycle_count <= 20 || (cycle_count % 5 == 0)) begin
@@ -191,7 +198,10 @@ module tb_cpu_pipelined;
         check_register(20, 32'h00000000, "AND x20 = x1 & x2");
         check_register(21, 32'h00000003, "OR x21 = x1 | x2");
 
-
+        // Test Case 10: Double Load-Add Pattern
+        check_register(22, 32'h00000008, "LW x22, 4(x20)");
+        check_register(23, 32'h00000008, "LW x23, 12(x20)");
+        check_register(24, 32'h00000010, "add x24, x22, x23");
 
         // Summary
         $display("\n======== Test Summary =======");

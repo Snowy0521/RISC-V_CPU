@@ -23,7 +23,7 @@ int main() {
 }
 */
 
-
+/*
 // Test 2: for loop
 int main(){
     int sum = 0;
@@ -32,9 +32,10 @@ int main(){
     }
     return sum;
 }
+*/
 
 
-/*
+
 // Test 1: simple add
 int main(){
     int a = 10;
@@ -42,7 +43,7 @@ int main(){
     int result = a + b;
     return result;
 }
-*/
+
 
 
 /* 

@@ -1,4 +1,4 @@
-module register_file(
+module register_file_pipelined(
     input clk, // clock signal
     input we,  // write enable
     input [4:0] raddr1, // read register address 1
@@ -11,8 +11,14 @@ module register_file(
     reg [31:0] registers [0:31]; // 32 registers of 32 bits each 
 
     // read operation 
-    assign rdata1 = (raddr1 == 0) ? 32'b0 : registers[raddr1];
-    assign rdata2 = (raddr2 == 0) ? 32'b0 : registers[raddr2];
+    // Combinational read with same-cycle write bypass
+    assign rdata1 = (raddr1 == 0) ? 32'b0 :
+                    (we && waddr == raddr1 && waddr != 0) ? wdata :
+                    registers[raddr1];
+    
+    assign rdata2 = (raddr2 == 0) ? 32'b0 :
+                    (we && waddr == raddr2 && waddr != 0) ? wdata :
+                    registers[raddr2];
     
     // write operation 
     // always_ff for sequential logic (flip-flops) only

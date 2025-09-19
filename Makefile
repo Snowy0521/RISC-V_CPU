@@ -55,7 +55,7 @@ FIRMWARE_ASM = firmware/start.s
 FIRMWARE_C = firmware/main.c
 LINKER_SCRIPT = firmware/link.ld
 VERILOG_SOURCES = src/cpu.v src/alu.v src/register_file.v src/memory.v
-VERILOG_SOURCES_PIPELINED = src/cpu_pipelined.v src/alu.v src/register_file.v src/memory.v
+VERILOG_SOURCES_PIPELINED = src/cpu_pipelined.v src/alu.v src/register_file_pipelined.v src/memory_pipelined.v
 
 
 # Verilator configuration
@@ -200,7 +200,7 @@ test-cpu: ${VMEM}
 
 test-cpu-pipelined:
 	@echo "Testing pipelined CPU module..."
-	cd src && iverilog -g2012 cpu_pipelined.v alu.v register_file.v memory.v testbench/tb_cpu_pipelined.v && vvp a.out && rm a.out
+	cd src && iverilog -g2012 cpu_pipelined.v alu.v register_file_pipelined.v memory_pipelined.v testbench/tb_cpu_pipelined.v && vvp a.out && rm a.out
 	@echo "Pipelined CPU test complete!"
 
 # Test individual modules
