@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="490" viewBox="0 0 620 490" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="arrow-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222222"/></marker><marker id="arrow-ctrl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b33a3a"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="28" font-size="16" text-anchor="start" fill="#222" font-weight="bold">alu (src/alu.v)</text>
+<text x="20" y="46" font-size="11" text-anchor="start" fill="#555" font-weight="normal">32-bit ALU: six operations, result selected by alu_control; zero = (result == 0)</text>
+<polyline points="20,80 120,80" fill="none" stroke="#222222" stroke-width="1.3"/>
+<text x="24" y="76" font-size="10" text-anchor="start" fill="#222222" font-weight="normal">a[31:0]</text>
+<polyline points="20,100 140,100" fill="none" stroke="#222222" stroke-width="1.3"/>
+<text x="24" y="96" font-size="10" text-anchor="start" fill="#222222" font-weight="normal">b[31:0]</text>
+<polyline points="120,80 120,366" fill="none" stroke="#222222" stroke-width="1.3"/>
+<polyline points="140,100 140,366" fill="none" stroke="#222222" stroke-width="1.3"/>
+<polyline points="120,136 180,136" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<circle cx="120" cy="136" r="2.6" fill="#222"/>
+<circle cx="140" cy="136" r="2.6" fill="#222"/>
+<rect x="180" y="120" width="170" height="32" rx="4" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="265.0" y="139.66666666666666" font-size="11" text-anchor="middle" fill="#222" font-weight="bold">AND:  a &amp; b</text>
+<polyline points="350,136 400,136" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<polyline points="120,182 180,182" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<circle cx="120" cy="182" r="2.6" fill="#222"/>
+<circle cx="140" cy="182" r="2.6" fill="#222"/>
+<rect x="180" y="166" width="170" height="32" rx="4" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="265.0" y="185.66666666666666" font-size="11" text-anchor="middle" fill="#222" font-weight="bold">OR:  a | b</text>
+<polyline points="350,182 400,182" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<polyline points="120,228 180,228" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<circle cx="120" cy="228" r="2.6" fill="#222"/>
+<circle cx="140" cy="228" r="2.6" fill="#222"/>
+<rect x="180" y="212" width="170" height="32" rx="4" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="265.0" y="231.66666666666666" font-size="11" text-anchor="middle" fill="#222" font-weight="bold">ADD:  a + b</text>
+<polyline points="350,228 400,228" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<polyline points="120,274 180,274" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<circle cx="120" cy="274" r="2.6" fill="#222"/>
+<circle cx="140" cy="274" r="2.6" fill="#222"/>
+<rect x="180" y="258" width="170" height="32" rx="4" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="265.0" y="277.6666666666667" font-size="11" text-anchor="middle" fill="#222" font-weight="bold">SUB:  a - b</text>
+<polyline points="350,274 400,274" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<polyline points="120,320 180,320" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<circle cx="120" cy="320" r="2.6" fill="#222"/>
+<circle cx="140" cy="320" r="2.6" fill="#222"/>
+<rect x="180" y="304" width="170" height="32" rx="4" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="265.0" y="323.6666666666667" font-size="11" text-anchor="middle" fill="#222" font-weight="bold">SLT:  (a &lt; b) ? 1 : 0, unsigned</text>
+<polyline points="350,320 400,320" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<polyline points="120,366 180,366" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<circle cx="120" cy="366" r="2.6" fill="#222"/>
+<circle cx="140" cy="366" r="2.6" fill="#222"/>
+<rect x="180" y="350" width="170" height="32" rx="4" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="265.0" y="369.6666666666667" font-size="11" text-anchor="middle" fill="#222" font-weight="bold">NOR:  ~(a | b)</text>
+<polyline points="350,366 400,366" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<polygon points="400,90 436,139.5 436,370.5 400,420" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="403" y="139" font-size="9" text-anchor="start" fill="#3b6ea8" font-weight="normal">0000</text>
+<text x="403" y="185" font-size="9" text-anchor="start" fill="#3b6ea8" font-weight="normal">0001</text>
+<text x="403" y="231" font-size="9" text-anchor="start" fill="#3b6ea8" font-weight="normal">0010</text>
+<text x="403" y="277" font-size="9" text-anchor="start" fill="#3b6ea8" font-weight="normal">0110</text>
+<text x="403" y="323" font-size="9" text-anchor="start" fill="#3b6ea8" font-weight="normal">0111</text>
+<text x="403" y="369" font-size="9" text-anchor="start" fill="#3b6ea8" font-weight="normal">1100</text>
+<polyline points="418,450 418,397" fill="none" stroke="#b33a3a" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#arrow-ctrl)"/>
+<text x="424" y="446" font-size="10" text-anchor="start" fill="#b33a3a" font-weight="normal">alu_control[3:0]</text>
+<text x="446" y="410" font-size="10" text-anchor="start" fill="#555" font-weight="normal" font-style="italic">other codes -&gt; 0</text>
+<polyline points="436,255.0 600,255.0" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<text x="500" y="250.0" font-size="10" text-anchor="start" fill="#222222" font-weight="normal">result[31:0]</text>
+<circle cx="480" cy="255.0" r="2.6" fill="#222"/>
+<polyline points="480,255.0 480,300" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<rect x="440" y="300" width="80" height="30" rx="4" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="480.0" y="318.6666666666667" font-size="11" text-anchor="middle" fill="#222" font-weight="bold">== 0</text>
+<polyline points="520,315 600,315" fill="none" stroke="#222222" stroke-width="1.3" marker-end="url(#arrow-data)"/>
+<text x="560" y="310" font-size="10" text-anchor="start" fill="#222222" font-weight="normal">zero</text>
+<text x="20" y="478" font-size="10" text-anchor="start" fill="#555" font-weight="normal" font-style="italic">Note: SLT compares unsigned; there is no XOR or shift unit (see README, Known Limitations).</text>
+</svg>

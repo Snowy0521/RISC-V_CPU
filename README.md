@@ -24,6 +24,13 @@ This project implements the classic 5-stage RISC-V pipeline (IF → ID → EX �
 -  Self-checking directed Verilog testbenches (module-level and full-CPU)
 
 
+## Documentation
+
+- [`docs/schematics/`](docs/schematics/): block-level schematic of every module in `src/`
+- [`docs/reference/`](docs/reference/): Patterson & Hennessy, *Computer Organization and Design* (RISC-V Edition), which the design follows
+
+![5-stage pipelined CPU](docs/schematics/cpu_pipelined.svg)
+
 ## Getting Started
 
 ### Prerequisites
