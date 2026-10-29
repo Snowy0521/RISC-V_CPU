@@ -1,0 +1,14 @@
+# Build outputs (removed by `make clean`)
+build/
+
+# Stray outputs from running tools by hand outside build/
+a.out
+*.vcd
+*.log
+
+# Questa artifacts
+work/
+transcript
+vsim.wlf
+
+.DS_Store
