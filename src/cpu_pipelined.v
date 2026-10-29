@@ -2,6 +2,24 @@ module cpu_pipelined(
     input clk,
     input reset
 );
+    // Parameter for opcodes
+    parameter OPCODE_LOAD   = 7'b0000011; // Load instructions
+    parameter OPCODE_STORE  = 7'b0100011; // Store instructions
+    parameter OPCODE_ARITH  = 7'b0010011; // Arithmetic instructions
+    parameter OPCODE_BRANCH = 7'b1100011; // Branch instructions
+    parameter OPCODE_JAL    = 7'b1101111; // JAL instruction
+    parameter OPCODE_JALR   = 7'b1100111; // JALR instruction
+    parameter OPCODE_LUI    = 7'b0110111; // Less Immediate Upper Immediate
+    parameter OPCODE_AUIPC  = 7'b0010111; // Add Upper Immediate to pc_jalr
+    parameter OPCODE_R_TYPE = 7'b0110011; // R-type instructions
+
+    // Signals used before the stage that drives them (declared first for strict SV tools)
+    logic        stall; // Stall signal (hazard detection unit)
+    logic [31:0] alu_a, alu_b; // ALU inputs
+    logic [1:0]  forward_a, forward_b; // Forwarding control signals
+    logic [31:0] alu_a_fwd, alu_b_fwd; // Forwarded ALU inputs
+    logic [31:0] rd_data_wb; // Data to write back to register
+
     // ==================================== Pipeline Registers ====================================
     // IF/ID Pipeline Register
     logic [31:0] if_id_pc;
@@ -168,20 +186,8 @@ module cpu_pipelined(
     logic        mem_write_enable; // Data memory write enable, control signal
     logic        branch;  // Branch signal
     logic  [1:0] alu_op; // ALU operation type
-    
 
-    // Parameter for opcodes
-    parameter OPCODE_LOAD   = 7'b0000011; // Load instructions
-    parameter OPCODE_STORE  = 7'b0100011; // Store instructions
-    parameter OPCODE_ARITH  = 7'b0010011; // Arithmetic instructions
-    parameter OPCODE_BRANCH = 7'b1100011; // Branch instructions
-    parameter OPCODE_JAL    = 7'b1101111; // JAL instruction
-    parameter OPCODE_JALR   = 7'b1100111; // JALR instruction
-    parameter OPCODE_LUI    = 7'b0110111; // Less Immediate Upper Immediate
-    parameter OPCODE_AUIPC  = 7'b0010111; // Add Upper Immediate to pc_jalr
-    parameter OPCODE_R_TYPE = 7'b0110011; // R-type instructions
-
-    // Instruction decode 
+    // Instruction decode
     assign opcode = if_id_instruction[6:0];
     assign rd_addr = if_id_instruction[11:7];
     assign funct3 = if_id_instruction[14:12];
@@ -330,12 +336,10 @@ module cpu_pipelined(
     end 
 
     // -------------------------------- Hazard Detection Unit --------------------------------
-    logic stall; // Stall signal
     assign stall = id_ex_valid && id_ex_mem_read_enable && 
                    ((id_ex_rd_addr == rs1_addr) || (id_ex_rd_addr == rs2_addr)) && (id_ex_rd_addr != 0);
 
     // ==================================== EX Stage ====================================
-    logic [31:0] alu_a, alu_b; // ALU inputs 
     assign alu_a = alu_a_fwd; // After forwarding
     assign alu_b = id_ex_alu_src ? id_ex_imm : alu_b_fwd; // After forwarding
 
@@ -411,9 +415,6 @@ module cpu_pipelined(
     end 
 
     // -------------------------------- Forwarding Unit --------------------------------
-    logic [1:0] forward_a, forward_b; // Forwarding control signals
-    logic [31:0] alu_a_fwd, alu_b_fwd; // Forwarded ALU inputs
-
     // Forwarding logic for ALU operand A
     always_comb begin 
         if (ex_mem_valid && ex_mem_reg_write_enable && (ex_mem_rd_addr != 0) && (ex_mem_rd_addr == id_ex_rs1_addr)) begin 
@@ -495,7 +496,6 @@ module cpu_pipelined(
     end
 
     // ==================================== WB Stage ====================================
-    logic [31:0] rd_data_wb; // Data to write back to register
     always_comb begin
         case (mem_wb_opcode)
             OPCODE_JAL, OPCODE_JALR: rd_data_wb = mem_wb_pc_plus4; // For JAL and JALR, write PC + 4 to rd

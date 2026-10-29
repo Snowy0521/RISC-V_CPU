@@ -17,7 +17,8 @@ module memory_pipelined(
 
 
     // Write operation
-    always_ff @(posedge clk) begin 
+    // Plain always here: the initial block below also drives mem, which always_ff forbids
+    always @(posedge clk) begin
         if (mem_write) begin 
             mem[addr[12:2]] <= wdata;
         end 

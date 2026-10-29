@@ -17,7 +17,8 @@ module register_file(
     // write operation 
     // always_ff for sequential logic (flip-flops) only
     // always for combinational logic and sequential logic
-    always_ff @(posedge clk) begin 
+    // Plain always here: the initial block below also drives registers, which always_ff forbids
+    always @(posedge clk) begin
         if (we && waddr != 0) begin 
             registers[waddr] <= wdata; // write data to the register
         end
