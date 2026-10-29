@@ -398,7 +398,7 @@ module cpu_pipelined(
         end else begin
             ex_mem_pc_branch <= pc_branch;
             ex_mem_alu_result <= alu_result;
-            ex_mem_rs2_data <= id_ex_rs2_data;
+            ex_mem_rs2_data <= alu_b_fwd; // Store data must be the forwarded rs2
             ex_mem_zero <= alu_zero;
             ex_mem_rd_addr <= id_ex_rd_addr;
             ex_mem_pc_plus4 <= id_ex_pc_plus4;
