@@ -122,11 +122,12 @@ module cpu_pipelined(
     assign flush = jump_taken_ex || branch_condition_met;
 
     // PC logic
+    // A taken branch in MEM is older than a jump in EX, so it wins (the jump is on the wrong path)
     always_comb begin
-        if (jump_taken_ex) begin
-            pc_next = jump_target_ex;
-        end else if (branch_condition_met) begin 
+        if (branch_condition_met) begin
             pc_next = ex_mem_pc_branch;
+        end else if (jump_taken_ex) begin
+            pc_next = jump_target_ex;
         end else if (stall) begin
             pc_next = pc; // Hold the PC value during stall
         end else begin
@@ -394,6 +395,13 @@ module cpu_pipelined(
             ex_mem_mem_write_enable <= 1'b0;
             ex_mem_mem_to_reg <= 1'b0;
             ex_mem_opcode <= 7'b0000000;
+            ex_mem_reg_write_enable <= 1'b0;
+        end else if (branch_condition_met) begin
+            // Taken branch in MEM: the instruction in EX is on the wrong path, insert a bubble
+            ex_mem_valid <= 1'b0;
+            ex_mem_branch <= 1'b0;
+            ex_mem_mem_read_enable <= 1'b0;
+            ex_mem_mem_write_enable <= 1'b0;
             ex_mem_reg_write_enable <= 1'b0;
         end else begin
             ex_mem_pc_branch <= pc_branch;
