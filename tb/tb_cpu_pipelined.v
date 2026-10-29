@@ -102,7 +102,7 @@ module tb_cpu_pipelined;
         uut.instruction_memory.mem[11] = 32'b0000000_00101_01010_010_00100_0100011;// sw x5, 4(x10)     # Store x5 to memory[1]
 
         // Test Case 6: Branch instruction (Branch not taken)
-        uut.instruction_memory.mem[12] = 32'b0000000_00010_00001_000_01011_1100011;// beq x1, x2, 0    # x1 != x2
+        uut.instruction_memory.mem[12] = 32'b0000000_00010_00001_000_01011_1100011;// beq x1, x2, +2058  # x1 != x2, not taken
         uut.instruction_memory.mem[13] = 32'b111111111011_00000_000_01100_0010011; // addi x12, x0, -5     
 
         // Test Case 7: Branch instruction (Branch taken)
@@ -126,6 +126,10 @@ module tb_cpu_pipelined;
         uut.instruction_memory.mem[25] = 32'b000000001100_10100_010_10111_0000011;  // lw x23, 12(x20)     # load from mem[3]
         uut.instruction_memory.mem[26] = 32'b0000000_10111_10110_000_11000_0110011; // add x24, x22, x23   # x24 = x22 + x23
 
+        // Test Case 11: Store data forwarding (store right after the instruction writing rs2)
+        uut.instruction_memory.mem[27] = 32'b000001110111_00000_000_11001_0010011;  // addi x25, x0, 0x77
+        uut.instruction_memory.mem[28] = 32'b0000000_11001_00000_010_10000_0100011; // sw x25, 16(x0)      # memory[4] = 0x77
+
         // Initialize data memory
         uut.data_memory.mem[0] = 32'h00000004; 
         uut.data_memory.mem[1] = 32'h00000008; 
@@ -140,7 +144,7 @@ module tb_cpu_pipelined;
         $display("[INFO] Reset released. Starting execution...");
 
         // Monitor pipeline for several cycles
-        repeat(38) begin // 27 cc for instruction + 4 overhead + 2 stall + 1 JAL flush + 3 BEQ flush
+        repeat(42) begin // 29 cc for instruction + 4 overhead + 2 stall + 2 JAL flush + 2 BEQ flush + margin
             @(posedge clk);
             cycle_count++;
             //if (cycle_count <= 20 || (cycle_count % 5 == 0)) begin
@@ -181,16 +185,12 @@ module tb_cpu_pipelined;
         // Test Case 6 & 7: Branch instruction
         check_register(12, 32'hFFFFFFFB, "Branch not taken x12");
         check_register(13, 32'h00000002, "Branch setup x13");
+        check_register(14, 32'h00000000, "Branch skipped instruction x14");
         check_register(15, 32'h00000006, "Branch taken x15");
 
-        // Test Case 8: JAL 
-        if (uut.register_file_init.registers[16] != 32'h00000000) begin
-            $display("[PASS] JAL x16 return address: 0x%h", uut.register_file_init.registers[16]);
-            test_passed++;
-        end else begin
-            $display("[FAIL] JAL x16 return address should not be 0");
-            test_failed++;
-        end
+        // Test Case 8: JAL
+        check_register(16, 32'h0000004C, "JAL x16 return address (PC 72 + 4)");
+        check_register(17, 32'h00000000, "JAL skipped instruction x17");
         check_register(18, 32'h00000007, "JAL target x18");
 
         // Test Case 9: Several ALU oprations
@@ -202,6 +202,16 @@ module tb_cpu_pipelined;
         check_register(22, 32'h00000008, "LW x22, 4(x20)");
         check_register(23, 32'h00000008, "LW x23, 12(x20)");
         check_register(24, 32'h00000010, "add x24, x22, x23");
+
+        // Test Case 11: Store data forwarding
+        check_register(25, 32'h00000077, "ADDI x25 = 0x77");
+        if (uut.data_memory.mem[4] == 32'h00000077) begin
+            $display("[PASS] Store data forwarding: mem[4] = 0x%h", uut.data_memory.mem[4]);
+            test_passed++;
+        end else begin
+            $display("[FAIL] Store data forwarding: mem[4] = 0x%h (Expected: 0x00000077)", uut.data_memory.mem[4]);
+            test_failed++;
+        end
 
         // Summary
         $display("\n======== Test Summary =======");
