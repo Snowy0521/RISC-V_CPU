@@ -1,6 +1,6 @@
 // Code your testbench here
 // or browse Examples
-`timescale 1ns / 1ps
+`timescale 1ns/1ns
 
 module tb_alu;
     reg [31:0] a;
