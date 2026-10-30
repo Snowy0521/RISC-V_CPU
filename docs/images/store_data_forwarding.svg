@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="760" viewBox="0 0 1100 760" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="a-222222" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222222"/></marker><marker id="a-b33a3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b33a3a"/></marker><marker id="a-2f7d43" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f7d43"/></marker><marker id="a-555555" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555555"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="30" font-size="18" text-anchor="start" fill="#222222" font-weight="bold">Store Data Forwarding</text>
+<text x="20" y="50" font-size="12" text-anchor="start" fill="#555555" font-weight="normal" font-family="Menlo, Consolas, monospace">addi x25, x0, 0x77  followed by  sw x25, 16(x0)</text>
+<text x="20" y="82" font-size="13" text-anchor="start" fill="#222222" font-weight="bold">1. Pipeline timing</text>
+<rect x="565" y="92" width="160" height="180" fill="#fff6d6"/>
+<text x="325.0" y="108" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">cycle 34</text>
+<text x="485.0" y="108" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">cycle 35</text>
+<text x="645.0" y="108" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">cycle 36</text>
+<text x="805.0" y="108" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">cycle 37</text>
+<text x="965.0" y="108" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">cycle 38</text>
+<text x="30" y="151" font-size="12" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">addi x25, x0, 0x77</text>
+<rect x="250" y="124" width="150" height="44" rx="5" fill="#e9f6ec" stroke="#2f7d43" stroke-width="1.5"/>
+<text x="325.0" y="151" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">ID</text>
+<rect x="410" y="124" width="150" height="44" rx="5" fill="#fdf0e1" stroke="#b86b16" stroke-width="1.5"/>
+<text x="485.0" y="142" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">EX</text>
+<text x="485.0" y="158" font-size="10" text-anchor="middle" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">x25 = 0x77</text>
+<rect x="570" y="124" width="150" height="44" rx="5" fill="#f1e9fb" stroke="#6b4fa8" stroke-width="1.5"/>
+<text x="645.0" y="142" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">MEM</text>
+<text x="645.0" y="158" font-size="10" text-anchor="middle" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">0x77</text>
+<rect x="730" y="124" width="150" height="44" rx="5" fill="#e6e6e6" stroke="#555555" stroke-width="1.5"/>
+<text x="805.0" y="151" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">WB</text>
+<text x="30" y="241" font-size="12" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">sw x25, 16(x0)</text>
+<rect x="250" y="214" width="150" height="44" rx="5" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="325.0" y="241" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">IF</text>
+<rect x="410" y="214" width="150" height="44" rx="5" fill="#e9f6ec" stroke="#2f7d43" stroke-width="1.5"/>
+<text x="485.0" y="232" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">ID</text>
+<text x="485.0" y="248" font-size="10" text-anchor="middle" fill="#b33a3a" font-weight="normal">x25 = 0 (stale)</text>
+<rect x="570" y="214" width="150" height="44" rx="5" fill="#fdf0e1" stroke="#b86b16" stroke-width="1.5"/>
+<text x="645.0" y="232" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">EX</text>
+<text x="645.0" y="248" font-size="10" text-anchor="middle" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">alu_b_fwd = 0x77</text>
+<rect x="730" y="214" width="150" height="44" rx="5" fill="#f1e9fb" stroke="#6b4fa8" stroke-width="1.5"/>
+<text x="805.0" y="241" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">MEM</text>
+<rect x="890" y="214" width="150" height="44" rx="5" fill="#e6e6e6" stroke="#555555" stroke-width="1.5"/>
+<text x="965.0" y="241" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">WB</text>
+<polyline points="645.0,168 645.0,212" fill="none" stroke="#2f7d43" stroke-width="1.4" marker-end="url(#a-2f7d43)"/>
+<text x="653.0" y="194" font-size="10" text-anchor="start" fill="#2f7d43" font-weight="normal" font-style="italic">forward</text>
+<polyline points="725,116 725,276" fill="none" stroke="#555555" stroke-width="1.4" stroke-dasharray="5,3"/>
+<text x="725" y="290" font-size="10" text-anchor="middle" fill="#555555" font-weight="normal" font-style="italic">clock edge</text>
+<text x="20" y="326" font-size="13" text-anchor="start" fill="#222222" font-weight="bold">2. Clock edge between cycle 36 and 37</text>
+<polyline points="610,344 610,720" fill="none" stroke="#555555" stroke-width="1.2" stroke-dasharray="5,3"/>
+<text x="610" y="740" font-size="10" text-anchor="middle" fill="#555555" font-weight="normal" font-style="italic">clock edge</text>
+<text x="300" y="356" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">Cycle 36: sw in EX, addi in MEM</text>
+<text x="860" y="356" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">Cycle 37: sw in MEM, addi in WB</text>
+<rect x="40" y="380" width="180" height="110" rx="5" fill="#e6e6e6" stroke="#555555" stroke-width="1.5"/>
+<text x="130" y="398" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">ID/EX register (sw)</text>
+<text x="52" y="428" font-size="11" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">id_ex_imm = 0x10</text>
+<text x="52" y="466" font-size="11" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">id_ex_rs2_data = 0</text>
+<rect x="40" y="540" width="180" height="64" rx="5" fill="#e6e6e6" stroke="#555555" stroke-width="1.5"/>
+<text x="130" y="558" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">EX/MEM register (addi)</text>
+<text x="52" y="588" font-size="11" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">ex_mem_alu_result = 0x77</text>
+<polygon points="290,440 324,454 324,506 290,520" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="307" y="534" font-size="10" text-anchor="middle" fill="#555555" font-weight="normal">forward mux B</text>
+<text x="307" y="547" font-size="10" text-anchor="middle" fill="#555555" font-weight="normal">forward_b = 2&#x27;b10</text>
+<polyline points="220,462 288,462" fill="none" stroke="#222222" stroke-width="1.4" marker-end="url(#a-222222)"/>
+<text x="232" y="456" font-size="10" text-anchor="middle" fill="#b33a3a" font-weight="normal" font-family="Menlo, Consolas, monospace">0</text>
+<polyline points="220,580 258,580 258,500 288,500" fill="none" stroke="#2f7d43" stroke-width="1.4" marker-end="url(#a-2f7d43)"/>
+<text x="264" y="572" font-size="10" text-anchor="start" fill="#2f7d43" font-weight="normal" font-family="Menlo, Consolas, monospace">0x77</text>
+<text x="294" y="466" font-size="9" text-anchor="start" fill="#555555" font-weight="normal">00</text>
+<text x="294" y="504" font-size="9" text-anchor="start" fill="#555555" font-weight="normal">10</text>
+<polygon points="400,392 434,406 434,452 400,466" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="417" y="384" font-size="10" text-anchor="middle" fill="#555555" font-weight="normal">alu_src = 1</text>
+<polyline points="220,412 398,412" fill="none" stroke="#222222" stroke-width="1.4" marker-end="url(#a-222222)"/>
+<polyline points="324,480 360,480 360,448 398,448" fill="none" stroke="#2f7d43" stroke-width="1.4" marker-end="url(#a-2f7d43)"/>
+<text x="404" y="416" font-size="9" text-anchor="start" fill="#555555" font-weight="normal">1</text>
+<text x="404" y="452" font-size="9" text-anchor="start" fill="#555555" font-weight="normal">0</text>
+<rect x="475" y="395" width="70" height="60" rx="5" fill="#e8f1fb" stroke="#3b6ea8" stroke-width="1.5"/>
+<text x="510" y="430" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">ALU</text>
+<polyline points="434,429 473,429" fill="none" stroke="#222222" stroke-width="1.4" marker-end="url(#a-222222)"/>
+<polyline points="360,480 360,560 648,560" fill="none" stroke="#2f7d43" stroke-width="2.2" marker-end="url(#a-2f7d43)"/>
+<text x="372" y="552" font-size="11" text-anchor="start" fill="#2f7d43" font-weight="bold" font-family="Menlo, Consolas, monospace">alu_b_fwd = 0x77</text>
+<text x="372" y="580" font-size="10" text-anchor="start" fill="#2f7d43" font-weight="normal" font-family="Menlo, Consolas, monospace">ex_mem_rs2_data &lt;= alu_b_fwd;</text>
+<polyline points="545,425 648,425" fill="none" stroke="#222222" stroke-width="1.4" marker-end="url(#a-222222)"/>
+<rect x="650" y="380" width="200" height="220" rx="5" fill="#e6e6e6" stroke="#555555" stroke-width="1.5"/>
+<text x="750" y="398" font-size="11" text-anchor="middle" fill="#222222" font-weight="bold">EX/MEM register (sw)</text>
+<text x="662" y="429" font-size="11" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">ex_mem_alu_result = 0x10</text>
+<text x="662" y="564" font-size="11" text-anchor="start" fill="#222222" font-weight="bold" font-family="Menlo, Consolas, monospace">ex_mem_rs2_data = 0x77</text>
+<rect x="920" y="430" width="150" height="120" rx="5" fill="#fdf0e1" stroke="#b86b16" stroke-width="1.5"/>
+<text x="995" y="452" font-size="12" text-anchor="middle" fill="#222222" font-weight="bold">Data memory</text>
+<text x="932" y="480" font-size="11" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">addr  = 0x10</text>
+<text x="932" y="500" font-size="11" text-anchor="start" fill="#222222" font-weight="normal" font-family="Menlo, Consolas, monospace">wdata = 0x77</text>
+<text x="995" y="532" font-size="11" text-anchor="middle" fill="#2f7d43" font-weight="bold" font-family="Menlo, Consolas, monospace">mem[0x10] = 0x77</text>
+<polyline points="850,425 885,425 885,470 918,470" fill="none" stroke="#222222" stroke-width="1.4" marker-end="url(#a-222222)"/>
+<polyline points="850,560 885,560 885,510 918,510" fill="none" stroke="#2f7d43" stroke-width="2.2" marker-end="url(#a-2f7d43)"/>
+<polyline points="220,475 238,475 238,680 648,680" fill="none" stroke="#b33a3a" stroke-width="1.4" stroke-dasharray="5,3" marker-end="url(#a-b33a3a)"/>
+<rect x="650" y="650" width="420" height="58" rx="5" fill="#fbe9ea" stroke="#b33a3a" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="662" y="684" font-size="11" text-anchor="start" fill="#b33a3a" font-weight="normal" font-family="Menlo, Consolas, monospace">before fix: ex_mem_rs2_data &lt;= id_ex_rs2_data;  mem = 0x00</text>
+</svg>
